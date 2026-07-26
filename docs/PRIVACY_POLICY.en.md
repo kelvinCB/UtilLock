@@ -8,7 +8,7 @@ Last updated: July 22, 2026.
 
 Blocking rules, schedules, selected apps, and domains remain on the device. Accessibility locally processes the visible app package and, in supported browsers, the address bar; it does not store or send general screen content. Optional Usage Access locally checks the foreground app.
 
-DNS queries are sent directly to Cloudflare DNS/Family for resolution or filtering; UtilLock does not retain DNS history. A challenge photo is temporarily cached. When cloud evaluation applies, it is sent through a UtilLock Supabase Edge Function to OpenAI, using `store:false`. The photo is not stored in Supabase and is deleted from device cache after evaluation. OpenAI may temporarily retain limited data for safety under its current policies.
+DNS queries are sent directly to Cloudflare DNS/Family for resolution or filtering; UtilLock does not retain DNS history. A challenge photo is temporarily cached. When cloud evaluation applies, it is sent through a UtilLock Supabase Edge Function, held during processing in a private Supabase bucket with no client access, and sent from there to OpenAI using `store:false`. The private object and device cache are deleted after evaluation. OpenAI may temporarily retain limited data for safety under its current policies.
 
 Supabase stores a user ID, challenge assignment, attempts, outcome, quota, and timestamps. If Google is linked, Google identity/email data is processed. Purchase token, product, status, and expiry are stored after server verification with Google Play.
 

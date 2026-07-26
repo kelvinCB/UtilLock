@@ -6,7 +6,7 @@ Use this as a draft; answer the Play Console form according to the final product
 |---|---|---|---|
 | User IDs | Collected | Account, quota, security | Supabase; linked to user; deletable |
 | Email address | Collected only after Google link | Account management/restore | Supabase/Google; deletable |
-| Photos | Transiently processed; shared with OpenAI for cloud evaluation | App functionality/fraud prevention | Not persisted by UtilLock; TLS; `store:false` |
+| Photos | Transiently processed; shared with OpenAI for cloud evaluation | App functionality/fraud prevention | Private temporary Supabase object; deleted after evaluation; TLS; `store:false` |
 | Purchase history | Collected | Subscription and restore | Verified with Google Play; server-only |
 | App activity / installed apps | Processed on device | Blocking functionality | Selected launcher apps stay local |
 | Web browsing / DNS names | Processed | Website filtering | URL local; DNS sent to Cloudflare; no UtilLock history |

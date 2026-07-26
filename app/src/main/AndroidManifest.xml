@@ -35,18 +35,21 @@
 
         <activity
             android:name=".challenge.ChallengeActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".blocking.BlockedActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTask"
+            android:screenOrientation="portrait"
             android:showWhenLocked="true" />
 
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

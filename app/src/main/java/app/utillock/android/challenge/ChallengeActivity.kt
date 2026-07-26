@@ -239,7 +239,10 @@ private fun ChallengeScreen(
         Text(tr("Pausa consciente", "Mindful pause"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
         Text(
-            tr("Resuelve en papel. La foto se procesa una sola vez y no se guarda.", "Solve it on paper. The photo is processed once and is not stored."),
+            tr(
+                "Resuelve en papel. La foto se procesa una sola vez y no se conserva después.",
+                "Solve it on paper. The photo is processed once and is not retained afterward.",
+            ),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(20.dp))

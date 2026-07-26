@@ -660,7 +660,12 @@ private fun ProfileScreen(
         item {
             HorizontalDivider()
             Text(tr("Privacidad", "Privacy"), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 14.dp))
-            Text(tr("Las fotos no se guardan. Las evaluaciones en línea se envían con store=false; la alternativa OCR permanece en el dispositivo.", "Photos are not stored. Online evaluations use store=false; fallback OCR stays on the device."))
+            Text(
+                tr(
+                    "Las fotos no se conservan después de la evaluación. Las evaluaciones en línea usan store=false; la alternativa OCR permanece en el dispositivo.",
+                    "Photos are not retained after evaluation. Online evaluations use store=false; fallback OCR stays on the device.",
+                ),
+            )
             OutlinedButton(
                 onClick = { confirmDelete = true },
                 enabled = sessions.isConfigured(),

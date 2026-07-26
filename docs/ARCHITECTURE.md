@@ -16,10 +16,10 @@ Ambos abren `BlockedActivity`; nunca simulan toques, escriben texto ni recopilan
 ## Flujo del reto
 
 1. El cliente pide `challenge-start`; el servidor selecciona un reto aleatorio y guarda nonce, expiración e intentos.
-2. CameraX guarda una foto temporal, la reduce a 1600 px/aproximadamente 1.5 MB y la envía como base64.
-3. `challenge-evaluate` comprueba usuario, sesión, cuota y tamaño antes de llamar a OpenAI.
-4. OpenAI devuelve JSON estricto. El servidor normaliza y compara tanto la transcripción como el cálculo independiente con `expected_answer`.
-5. En éxito, el cliente concede una pausa local. La imagen nunca se inserta en Supabase ni se escribe en logs.
+2. CameraX guarda una foto temporal, la reduce a 1600 px/aproximadamente 1.5 MB y la envía como base64 a la única Edge Function autorizada para evaluar.
+3. `challenge-evaluate` comprueba usuario, sesión, cuota, Base64, firma real del archivo, MIME y tamaño. Luego crea un objeto efímero en el bucket privado `challenge-photos`, que no tiene políticas de acceso para clientes.
+4. La Edge Function es el único componente que llama a OpenAI. OpenAI devuelve JSON estricto con legibilidad, presencia y suficiencia de escritura manuscrita, transcripción, cálculo, coincidencia y confianza.
+5. El servidor recalcula la decisión y exige que transcripción y cálculo coincidan con `expected_answer`. En éxito, el cliente concede una pausa local. La foto no se escribe en logs y el objeto privado se elimina en un bloque `finally`.
 6. Ante fallo técnico se usa OCR local. Premium y prueba lo obtienen inmediatamente; una cuenta gratuita agotada espera 15 minutos. Tres errores generan un reto nuevo y cinco minutos de espera.
 
 ## Datos y confianza
@@ -35,7 +35,7 @@ Ambos abren `BlockedActivity`; nunca simulan toques, escriben texto ni recopilan
 - No existe `QUERY_ALL_PACKAGES`.
 - Backup Android deshabilitado para reglas y tokens.
 - HTTPS obligatorio y tráfico cleartext deshabilitado.
-- Las fotos se eliminan del caché después de cada evaluación.
+- Las fotos se eliminan del caché y del bucket privado temporal después de cada evaluación.
 - La protección excluye UtilLock y no intercepta apps del sistema que no estén en el selector del launcher.
 - `store:false` evita almacenar la respuesta en OpenAI; la política de retención del proveedor aún debe reflejarse en privacidad.
 

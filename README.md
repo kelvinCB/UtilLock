@@ -58,7 +58,7 @@ npx supabase link --project-ref TU_PROJECT_REF
 npx supabase db push
 ```
 
-5. Configura los secretos de `supabase/functions/.env.example` en el proyecto. `SUPABASE_DB_URL` debe ser la URL del transaction pooler. `OPENAI_API_KEY`, la cuenta de servicio de Google y `SUPABASE_SERVICE_ROLE_KEY` solo existen en el servidor.
+5. Configura `OPENAI_API_KEY` desde `supabase/functions/.env.example` como Supabase Edge Function Secret. Las variables `SUPABASE_URL`, `SUPABASE_DB_URL` y las claves de servidor ya son provistas por el entorno alojado; nunca se copian al APK.
 6. Despliega:
 
 ```powershell
@@ -74,9 +74,7 @@ Las funciones validan por sí mismas el JWT del usuario; por eso `verify_jwt=fal
 
 ## OpenAI
 
-`challenge-evaluate` usa Responses API, entrada de imagen, Structured Outputs, `store:false` y el modelo configurable `OPENAI_EVALUATION_MODEL` (por defecto `gpt-5.6-terra`). El servidor vuelve a comparar la respuesta transcrita y calculada con la respuesta determinista del banco.
-
-No había una `OPENAI_API_KEY` disponible durante esta implementación, así que el contrato y el type-check están verificados, pero la llamada real queda pendiente hasta configurar el secreto.
+`challenge-evaluate` autentica al usuario, valida formato/tamaño real de la foto, la coloca de forma temporal en el bucket privado `challenge-photos` y llama a Responses API con entrada de imagen, Structured Outputs y `store:false`. El modelo configurable `OPENAI_EVALUATION_MODEL` usa `gpt-5.6-terra` por defecto. El servidor exige legibilidad, escritura manuscrita, una respuesta suficiente y coincidencia entre transcripción, cálculo independiente y respuesta determinista. El objeto privado se elimina siempre al terminar la evaluación.
 
 ## Google Play
 

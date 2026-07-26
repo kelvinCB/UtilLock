@@ -12,7 +12,7 @@
 - Accesibilidad: se procesa localmente el paquete de la app visible y, en navegadores compatibles, la barra de direcciones. No se guarda ni envía el contenido de la pantalla.
 - Acceso de uso: si se activa, se procesa localmente qué aplicación está en primer plano.
 - DNS: las consultas se envían directamente a Cloudflare DNS/Family para resolver o filtrar dominios. UtilLock no conserva un historial DNS.
-- Cámara: la foto del ejercicio se guarda temporalmente en el caché. Si corresponde evaluación con IA, se envía a la Edge Function de UtilLock y de allí a OpenAI. No se almacena en Supabase y se elimina del dispositivo tras evaluarla.
+- Cámara: la foto del ejercicio se guarda temporalmente en el caché. Si corresponde evaluación con IA, se envía a la Edge Function de UtilLock, se coloca durante el procesamiento en un bucket privado de Supabase sin acceso para clientes y de allí se envía a OpenAI. El objeto privado y el caché local se eliminan tras la evaluación.
 - Cuenta: Supabase conserva un identificador de usuario. Si vinculas Google, también trata la identidad/correo proporcionados por Google.
 - Servicio: se conservan reto asignado, intentos, resultado, cuota diaria y marca de tiempo; no la foto.
 - Compra: se conserva el token de compra, producto, estado y expiración verificados con Google Play.

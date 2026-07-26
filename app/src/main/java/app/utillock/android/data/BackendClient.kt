@@ -49,6 +49,20 @@ class BackendClient(private val sessions: SessionRepository) {
             .put("mime_type", "image/jpeg")
             .put("image_base64", Base64.encodeToString(image.readBytes(), Base64.NO_WRAP))
         val result = call("challenge-evaluate", body) ?: return null
+        if (result.optString("decision") == "rejected" && result.has("error")) {
+            val spanish = Locale.getDefault().language == "es"
+            val feedback = when (result.optString("error")) {
+                "image_too_large" -> if (spanish) "La foto supera 1.5 MB." else "The photo is larger than 1.5 MB."
+                "image_too_small" -> if (spanish) "La foto no contiene una respuesta suficiente." else "The photo does not contain a sufficient answer."
+                "invalid_photo_type" -> if (spanish) "La imagen no es una foto JPEG o PNG válida." else "The image is not a valid JPEG or PNG photo."
+                else -> if (spanish) "La foto no se puede leer. Toma otra con buena luz." else "The photo cannot be read. Take another in good light."
+            }
+            return ChallengeVerdict(
+                accepted = false,
+                feedback = feedback,
+                attemptsRemaining = result.optInt("attempts_remaining", 3),
+            )
+        }
         return ChallengeVerdict(
             accepted = result.optBoolean("accepted"),
             feedback = result.optString("feedback"),
@@ -82,7 +96,9 @@ class BackendClient(private val sessions: SessionRepository) {
             connection.outputStream.use { it.write(body.toString().toByteArray()) }
             val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
             val payload = JSONObject(stream.bufferedReader().use { it.readText() })
-            if (connection.responseCode !in 200..299) return@runCatching null
+            if (connection.responseCode !in 200..299 && payload.optString("decision") != "rejected") {
+                return@runCatching null
+            }
             payload
         }.getOrNull()
     }
