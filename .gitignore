@@ -1,0 +1,15 @@
+.gradle/
+.idea/
+.kotlin/
+.tooling/
+build/
+**/build/
+local.properties
+*.jks
+*.keystore
+*.aab
+*.apk
+supabase/.branches/
+supabase/.temp/
+supabase/functions/.env
+.codex-remote-attachments/

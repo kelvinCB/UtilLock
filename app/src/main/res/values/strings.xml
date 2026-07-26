@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">UtilLock</string>
+    <string name="accessibility_service_label">Protección de aplicaciones y sitios</string>
+    <string name="accessibility_service_description">Detecta las aplicaciones y direcciones web elegidas para mostrar la pantalla de bloqueo. UtilLock no escribe, envía ni almacena el contenido de tus pantallas.</string>
+    <string name="vpn_notification_title">Protección web activa</string>
+    <string name="vpn_notification_text">UtilLock está filtrando dominios mediante DNS.</string>
+    <string name="web_protection_channel">Protección web</string>
+    <string name="stop">Detener</string>
+    <string name="usage_notification_title">Respaldo de bloqueo activo</string>
+    <string name="usage_notification_text">UtilLock comprueba la aplicación visible.</string>
+    <string name="usage_notification_channel">Respaldo de bloqueo</string>
+</resources>

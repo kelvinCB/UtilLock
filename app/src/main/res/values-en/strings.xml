@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">UtilLock</string>
+    <string name="accessibility_service_label">App and website protection</string>
+    <string name="accessibility_service_description">Detects the apps and web addresses you selected to show the blocking screen. UtilLock does not type, send, or store your screen content.</string>
+    <string name="vpn_notification_title">Web protection active</string>
+    <string name="vpn_notification_text">UtilLock is filtering domains through DNS.</string>
+    <string name="web_protection_channel">Web protection</string>
+    <string name="stop">Stop</string>
+    <string name="usage_notification_title">Backup blocking active</string>
+    <string name="usage_notification_text">UtilLock is checking the visible app.</string>
+    <string name="usage_notification_channel">Blocking backup</string>
+</resources>
