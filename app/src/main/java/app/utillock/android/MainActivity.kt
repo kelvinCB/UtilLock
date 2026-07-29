@@ -22,6 +22,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AppBlocking
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Language
@@ -81,7 +83,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -105,6 +110,8 @@ import app.utillock.android.ui.components.SectionHeader
 import app.utillock.android.ui.theme.UtilLockGradients
 import app.utillock.android.ui.theme.UtilLockTheme
 import app.utillock.android.ui.tr
+import app.utillock.android.ui.currentLanguage
+import app.utillock.android.ui.setLanguage
 import java.time.LocalDateTime
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -242,6 +249,9 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
     var showSites by remember { mutableStateOf(false) }
     var showSchedule by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
+    var showQuickBlockSetup by remember { mutableStateOf(false) }
+    // A setup is considered ready only when the user has selected at least one destination.
+    val hasBlockingConfiguration = state.blockedPackages.isNotEmpty() || state.blockedDomains.isNotEmpty()
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -252,17 +262,22 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GlowIconBadge(Icons.Rounded.Security, size = 40.dp)
                 Spacer(Modifier.size(10.dp))
-                Column {
-                    Text("UtilLock", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-                    Text(
-                        tr("Bloqueo premium de apps y sitios", "Premium app & site blocking"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text("UtilLock", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             }
         }
-        item { HeroCard(state, active, now, duration, repository, context, onNeedsPermission = { showPermissionDialog = true }) }
+        item {
+            HeroCard(
+                state = state,
+                active = active,
+                now = now,
+                duration = duration,
+                repository = repository,
+                context = context,
+                hasBlockingConfiguration = hasBlockingConfiguration,
+                onOpenSetup = { showQuickBlockSetup = true },
+                onNeedsPermission = { showPermissionDialog = true },
+            )
+        }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 listOf(30 to "30 min", 60 to "60 min", 120 to "2 h").forEach { (minutes, label) ->
@@ -331,6 +346,7 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
     if (showApps) AppPickerDialog(repository, onDismiss = { showApps = false })
     if (showSites) SitePickerDialog(repository, onDismiss = { showSites = false })
     if (showSchedule) ScheduleDialog(repository, onDismiss = { showSchedule = false })
+    if (showQuickBlockSetup) QuickBlockSetupScreen(onBack = { showQuickBlockSetup = false })
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
@@ -364,6 +380,8 @@ private fun HeroCard(
     duration: Int,
     repository: ProtectionRepository,
     context: Context,
+    hasBlockingConfiguration: Boolean,
+    onOpenSetup: () -> Unit,
     onNeedsPermission: () -> Unit,
 ) {
     val quickActive = state.isQuickBlockActive(now)
@@ -383,13 +401,12 @@ private fun HeroCard(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
-                    Text(
-                        "${state.blockedPackages.size} apps · ${state.blockedDomains.size} ${tr("sitios", "sites")}",
-                        color = Color.White.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
                 }
-                StatusPillOnGradient(active.active)
+                StatusPillOnGradient(
+                    active = active.active,
+                    blockedApps = state.blockedPackages.size,
+                    blockedSites = state.blockedDomains.size,
+                )
             }
             Spacer(Modifier.height(20.dp))
             if (quickActive) {
@@ -433,18 +450,12 @@ private fun HeroCard(
                     brush = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.14f))),
                 )
             } else {
-                Text(
-                    if (active.active) tr("Un horario está protegiendo tu dispositivo ahora.", "A schedule is protecting your device right now.")
-                    else tr("Elige una duración y comienza tu bloqueo con un toque.", "Pick a duration and start your block in one tap."),
-                    color = Color.White.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(18.dp))
-                PremiumButton(
-                    text = tr("Iniciar bloqueo", "Start block"),
-                    icon = Icons.Rounded.PlayArrow,
-                    enabled = state.blockedPackages.isNotEmpty() || state.blockedDomains.isNotEmpty() || state.adultFilterEnabled,
-                    onClick = {
+                // Preview-only UI: keep the CTA enabled while the real setup flow is still pending.
+                val canStart = true
+                val startBlock = {
+                    if (!hasBlockingConfiguration) {
+                        onOpenSetup()
+                    } else {
                         val accessibilityReady = isAccessibilityEnabled(context)
                         val usageReady = state.usageMonitorEnabled && hasUsageAccess(context)
                         if (accessibilityReady || usageReady) {
@@ -452,18 +463,641 @@ private fun HeroCard(
                         } else {
                             onNeedsPermission()
                         }
-                    },
+                    }
+                }
+
+                Text(
+                    tr("Recupera El Control Ya!!!!", "Take Back Control Now!!!!"),
                     modifier = Modifier.fillMaxWidth(),
-                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.White, Color.White.copy(alpha = 0.92f))),
-                    contentColor = app.utillock.android.ui.theme.Violet700,
+                    color = Color.White.copy(alpha = 0.78f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
                 )
+                Spacer(Modifier.height(18.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(82.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFF3395F4).copy(alpha = if (canStart) 1f else 0.45f))
+                        .clickable(enabled = canStart, onClick = startBlock),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.PlayArrow,
+                            contentDescription = tr("Iniciar bloqueo", "Start block"),
+                            tint = Color.White,
+                            modifier = Modifier.size(42.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            tr("Iniciar", "Start"),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    DemoBlockMode(
+                        icon = Icons.Rounded.LockClock,
+                        label = tr("Temporizado", "Timed"),
+                        onClick = onOpenSetup,
+                        modifier = Modifier.weight(1f),
+                    )
+                    DemoBlockMode(
+                        icon = Icons.Rounded.Bolt,
+                        label = "Pomodoro",
+                        onClick = onOpenSetup,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun StatusPillOnGradient(active: Boolean) {
+private fun DemoBlockMode(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .height(66.dp)
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(label, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+@Composable
+private fun QuickBlockSetupScreen(onBack: () -> Unit) {
+    var blockAdultContent by remember { mutableStateOf(false) }
+    var blockPurchases by remember { mutableStateOf(false) }
+    var blockUnsupportedBrowsers by remember { mutableStateOf(false) }
+    var launchOnStart by remember { mutableStateOf(true) }
+    var showNotifications by remember { mutableStateOf(true) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var showBlockingList by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 112.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = tr("Volver", "Back"))
+                }
+            }
+            item {
+                Text(
+                    tr("Configura tu bloqueo rápido", "Configure your quick block"),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Black,
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    tr(
+                        "Estos ajustes se aplicarán cada vez que inicies un bloqueo rápido, temporizado o Pomodoro.",
+                        "These settings apply whenever you start a quick, timed, or Pomodoro block.",
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Bloqueo", "Blocking"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(
+                            tr("Selecciona lo que quieres proteger.", "Choose what you want to protect."),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    Text(
+                        tr("Lista de bloqueos", "Block list"),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.surfaceContainer),
+                ) {
+                    SetupDestinationRow(Icons.Rounded.AppBlocking, tr("Aplicaciones", "Apps"), "0") { selectedCategory = "apps" }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                    SetupDestinationRow(Icons.Rounded.Language, tr("Sitios web", "Websites"), "0") { selectedCategory = "websites" }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                    SetupDestinationRow(Icons.Rounded.SavedSearch, tr("Palabras clave", "Keywords"), "0") { selectedCategory = "keywords" }
+                }
+            }
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(50))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(tr("Copiar de otra configuración", "Copy from another setup"), fontWeight = FontWeight.Bold)
+                }
+            }
+            item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) }
+            item {
+                Text(tr("Protecciones opcionales", "Optional protections"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+            item {
+                SetupToggleCard(
+                    icon = Icons.Rounded.Security,
+                    title = tr("Bloqueo de contenido adulto", "Adult content blocking"),
+                    description = tr("Protege tus navegadores con un filtro DNS familiar.", "Protect your browsers with a family DNS filter."),
+                    checked = blockAdultContent,
+                    onCheckedChange = { blockAdultContent = it },
+                )
+            }
+            item {
+                SetupToggleCard(
+                    icon = Icons.Rounded.Bolt,
+                    title = tr("Bloquear compras integradas", "Block in-app purchases"),
+                    description = tr("Un freno visual para compras no deseadas.", "A visual guardrail for unwanted purchases."),
+                    checked = blockPurchases,
+                    onCheckedChange = { blockPurchases = it },
+                )
+            }
+            item {
+                SetupToggleCard(
+                    icon = Icons.Rounded.Language,
+                    title = tr("Navegadores no compatibles", "Unsupported browsers"),
+                    description = tr("Bloquea el navegador cuando no se puede leer su página activa.", "Block the browser when its active page cannot be read."),
+                    checked = blockUnsupportedBrowsers,
+                    onCheckedChange = { blockUnsupportedBrowsers = it },
+                )
+            }
+            item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant) }
+            item {
+                Text(tr("Comportamiento", "Behavior"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.surfaceContainer),
+                ) {
+                    SetupPreferenceRow(tr("Inicio", "Start"), launchOnStart) { launchOnStart = it }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                    SetupPreferenceRow(tr("Notificaciones", "Notifications"), showNotifications) { showNotifications = it }
+                }
+            }
+        }
+        Button(
+            onClick = onBack,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            shape = RoundedCornerShape(50),
+        ) {
+            Text(tr("Guardar configuración", "Save setup"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+        selectedCategory?.let { category ->
+            BlockingCategoryIntro(
+                category = category,
+                onBack = { selectedCategory = null },
+                onAllow = {
+                    selectedCategory = null
+                    showBlockingList = true
+                },
+            )
+        }
+        if (showBlockingList) {
+            BlockingListScreen(
+                onBack = { showBlockingList = false },
+                onSave = { showBlockingList = false },
+            )
+        }
+    }
+}
+
+@Composable
+private fun SetupDestinationRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    count: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 17.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(14.dp))
+        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(count, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(10.dp))
+        Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.headlineMedium)
+    }
+}
+
+@Composable
+private fun BlockingCategoryIntro(category: String, onBack: () -> Unit, onAllow: () -> Unit) {
+    val title = when (category) {
+        "websites" -> tr("Un espacio más tranquilo empieza aquí", "A calmer space starts here")
+        "keywords" -> tr("Tus palabras también marcan el ritmo", "Your words can set the pace")
+        else -> tr("Dale a tus apps un límite claro", "Give your apps a clear boundary")
+    }
+    val description = when (category) {
+        "websites" -> tr(
+            "Crea una pausa consciente para las páginas que más interrumpen tu atención.",
+            "Create a mindful pause for the websites that interrupt your attention most.",
+        )
+        "keywords" -> tr(
+            "Añade palabras que quieras mantener fuera de tu foco durante este bloqueo.",
+            "Add words you want to keep outside your focus during this block.",
+        )
+        else -> tr(
+            "Selecciona las aplicaciones que quieres dejar fuera para volver a lo importante.",
+            "Choose the apps you want to keep out so you can return to what matters.",
+        )
+    }
+    val privacyNote = tr(
+        "Tu selección se queda en el dispositivo. UtilLock solo la usa para aplicar tus reglas de bloqueo.",
+        "Your selection stays on this device. UtilLock only uses it to apply your blocking rules.",
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 148.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Rounded.ArrowBack, contentDescription = tr("Volver", "Back"))
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Text(tr("Personaliza tu bloqueo", "Customize your block"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                }
+            }
+            item {
+                Image(
+                    painter = painterResource(R.drawable.quick_block_categories),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(278.dp)
+                        .clip(MaterialTheme.shapes.extraLarge),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+            item {
+                Text(title, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+            }
+            item {
+                Text(description, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GlowIconBadge(Icons.Rounded.VerifiedUser, size = 42.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(tr("Privacidad primero", "Privacy first"), fontWeight = FontWeight.Bold)
+                        Text(privacyNote, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            item {
+                Text(
+                    tr("Puedes cambiar esta decisión cuando quieras desde tu lista de bloqueo.", "You can change this choice anytime from your block list."),
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Button(onClick = onAllow, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(50)) {
+                Text(tr("Permitir y continuar", "Allow and continue"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(50)) {
+                Text(tr("Ahora no", "Not now"), fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlockingListScreen(onBack: () -> Unit, onSave: () -> Unit) {
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedCategories by remember { mutableStateOf(setOf<String>()) }
+    var expandedCategories by remember { mutableStateOf(setOf<String>()) }
+    var selectedApps by remember { mutableStateOf(setOf<String>()) }
+    val categories = listOf(
+        Triple("social", Icons.Rounded.Workspaces, tr("Redes sociales", "Social networks")),
+        Triple("games", Icons.Rounded.Bolt, tr("Juegos", "Games")),
+        Triple("entertainment", Icons.Rounded.Wifi, tr("Entretenimiento", "Entertainment")),
+        Triple("creativity", Icons.Rounded.SavedSearch, tr("Creatividad", "Creativity")),
+        Triple("education", Icons.Rounded.VerifiedUser, tr("Educación", "Education")),
+        Triple("health", Icons.Rounded.Security, tr("Salud y bienestar", "Health & wellness")),
+        Triple("productivity", Icons.Rounded.PlayArrow, tr("Productividad", "Productivity")),
+        Triple("news", Icons.Rounded.LockClock, tr("Noticias y libros", "News & books")),
+        Triple("shopping", Icons.Rounded.Language, tr("Compras y comida", "Shopping & food")),
+        Triple("travel", Icons.Rounded.Person, tr("Viajes", "Travel")),
+        Triple("utilities", Icons.Rounded.AppBlocking, tr("Utilidades", "Utilities")),
+        Triple("other", Icons.Rounded.Workspaces, tr("Otros", "Other")),
+    )
+    val appsByCategory = mapOf(
+        "social" to listOf("Instagram", "TikTok", "WhatsApp", "Snapchat"),
+        "games" to listOf("Astro Builder", "Balls Bounce!", "Bee Factory", "Clash of Clans", "Clash Royale", "coin_toss", "Contexto"),
+        "entertainment" to listOf("YouTube", "Spotify", "Netflix"),
+        "creativity" to listOf("Canva", "Pinterest", "CapCut"),
+        "education" to listOf("Duolingo", "Khan Academy", "Coursera"),
+        "health" to listOf("Google Fit", "Meditação", "Sleep Cycle"),
+        "productivity" to listOf("Notion", "Google Drive", "Calendar"),
+        "news" to listOf("Google News", "Kindle", "The New York Times"),
+        "shopping" to listOf("Amazon", "AliExpress", "Mercado Libre"),
+        "travel" to listOf("Google Maps", "Booking", "Uber"),
+        "utilities" to listOf("Calculadora", "Files", "Scanner"),
+        "other" to listOf("Aplicación sin categoría"),
+    )
+    val tabs = listOf(tr("Aplicaciones", "Apps"), tr("Webs", "Websites"), tr("Palabras clave", "Keywords"))
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 112.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Rounded.ArrowBack, contentDescription = tr("Volver", "Back"))
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Text(tr("Lista de bloqueos", "Block list"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                }
+            }
+            item {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    tabs.forEachIndexed { index, tab ->
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { selectedTab = index }
+                                .padding(top = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                tab,
+                                color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp)
+                                    .background(if (selectedTab == index) MaterialTheme.colorScheme.primary else Color.Transparent),
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+            if (selectedTab == 0) {
+                item {
+                    Text(
+                        tr("Categorías disponibles en tu dispositivo", "Categories available on your device"),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                categories.forEach { (id, icon, label) ->
+                    item(key = "category-$id") {
+                        CategorySelectionRow(
+                            icon = icon,
+                            label = label,
+                            expanded = id in expandedCategories,
+                            selected = id in selectedCategories,
+                            onExpand = {
+                                expandedCategories = if (id in expandedCategories) expandedCategories - id else expandedCategories + id
+                            },
+                            onSelectedChange = { checked ->
+                                selectedCategories = if (checked) selectedCategories + id else selectedCategories - id
+                            },
+                        )
+                    }
+                    if (id in expandedCategories) {
+                        items(appsByCategory[id].orEmpty(), key = { app -> "app-$id-$app" }) { app ->
+                            BlockingAppRow(
+                                appName = app,
+                                selected = app in selectedApps,
+                                onSelectedChange = { checked ->
+                                    selectedApps = if (checked) selectedApps + app else selectedApps - app
+                                },
+                            )
+                        }
+                    }
+                }
+            } else {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.large)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        GlowIconBadge(if (selectedTab == 1) Icons.Rounded.Language else Icons.Rounded.SavedSearch, size = 56.dp)
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            if (selectedTab == 1) tr("Tus webs aparecerán aquí", "Your websites will appear here") else tr("Tus palabras clave aparecerán aquí", "Your keywords will appear here"),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            if (selectedTab == 1) tr("Añade direcciones web o dominios cuando quieras personalizar este bloqueo.", "Add websites or domains whenever you want to customize this block.") else tr("Añade palabras para mantener ciertas búsquedas fuera de tu foco.", "Add words to keep certain searches outside your focus."),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+        }
+        Button(
+            onClick = onSave,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            shape = RoundedCornerShape(50),
+        ) {
+            Text(tr("Guardar selección", "Save selection"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun CategorySelectionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    expanded: Boolean,
+    selected: Boolean,
+    onExpand: () -> Unit,
+    onSelectedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(onClick = onExpand)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(if (expanded) "⌃" else "⌄", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.width(12.dp))
+        GlowIconBadge(icon, size = 44.dp)
+        Spacer(Modifier.width(14.dp))
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Checkbox(checked = selected, onCheckedChange = onSelectedChange)
+    }
+}
+
+@Composable
+private fun BlockingAppRow(appName: String, selected: Boolean, onSelectedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable { onSelectedChange(!selected) }
+            .padding(start = 82.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GlowIconBadge(Icons.Rounded.AppBlocking, size = 42.dp, brush = UtilLockGradients.heroSoft)
+        Spacer(Modifier.width(14.dp))
+        Text(appName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Checkbox(checked = selected, onCheckedChange = onSelectedChange)
+    }
+}
+
+@Composable
+private fun SetupToggleCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(18.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        GlowIconBadge(icon, size = 44.dp)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun SetupPreferenceRow(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun StatusPillOnGradient(active: Boolean, blockedApps: Int, blockedSites: Int) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
@@ -474,7 +1108,7 @@ private fun StatusPillOnGradient(active: Boolean) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(if (active) Color.White else Color.White.copy(alpha = 0.5f)))
         Spacer(Modifier.width(6.dp))
         Text(
-            if (active) tr("ACTIVO", "ACTIVE") else tr("LISTO", "READY"),
+            if (active) tr("ACTIVO", "ACTIVE") else "$blockedApps apps · $blockedSites ${tr("sitios", "sites")}",
             color = Color.White,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.labelMedium,
@@ -812,6 +1446,7 @@ private fun ProfileScreen(
     val scope = rememberCoroutineScope()
     val state by billing.state.collectAsState()
     val linked by sessions.linked.collectAsState()
+    val language = currentLanguage()
     var accountMessage by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     val setupAccountMessage = tr(
@@ -894,6 +1529,21 @@ private fun ProfileScreen(
                         modifier = Modifier.clickable(enabled = linked, onClick = billing::restore),
                     )
                     state.message?.let { Text(it, color = Color.White) }
+                }
+            }
+        }
+        item {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(6.dp))
+            Text(tr("Idioma", "Language"), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                listOf("es" to "Español", "en" to "English").forEach { (code, label) ->
+                    val selected = language == code
+                    OutlinedButton(
+                        onClick = { setLanguage(context, code) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(if (selected) "✓ $label" else label) }
                 }
             }
         }
