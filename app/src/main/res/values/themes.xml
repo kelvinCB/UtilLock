@@ -6,5 +6,14 @@
         <item name="android:navigationBarColor">@color/navy_950</item>
         <item name="android:windowActionModeOverlay">true</item>
     </style>
+
+    <!-- Shown for an instant on cold start, before Compose takes over. Keeps the very first
+         frame the user sees on-brand instead of a flash of white/system background. -->
+    <style name="Theme.UtilLock.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ink_950</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/violet_700</item>
+        <item name="postSplashScreenTheme">@style/Theme.UtilLock</item>
+    </style>
 </resources>
 

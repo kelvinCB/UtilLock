@@ -16,7 +16,7 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,19 +25,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +60,11 @@ import app.utillock.android.UtilLockApplication
 import app.utillock.android.data.BackendClient
 import app.utillock.android.data.ProtectionRepository
 import app.utillock.android.model.LogicChallenge
+import app.utillock.android.ui.components.GlowIconBadge
+import app.utillock.android.ui.components.GradientCard
+import app.utillock.android.ui.components.PremiumButton
+import app.utillock.android.ui.components.SegmentedControl
+import app.utillock.android.ui.theme.UtilLockGradients
 import app.utillock.android.ui.theme.UtilLockTheme
 import app.utillock.android.ui.tr
 import com.google.mlkit.vision.common.InputImage
@@ -226,7 +229,18 @@ private fun ChallengeScreen(
     onCancel: () -> Unit,
 ) {
     if (loading || challenge == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                GlowIconBadge(Icons.Rounded.SelfImprovement, size = 64.dp)
+                Spacer(Modifier.height(16.dp))
+                CircularProgressIndicator(modifier = Modifier.height(22.dp))
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    tr("Preparando tu pausa…", "Preparing your pause…"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         return
     }
     var cameraOpen by remember { mutableStateOf(false) }
@@ -236,46 +250,66 @@ private fun ChallengeScreen(
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
     ) {
-        Text(tr("Pausa consciente", "Mindful pause"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            tr(
-                "Resuelve en papel. La foto se procesa una sola vez y no se conserva después.",
-                "Solve it on paper. The photo is processed once and is not retained afterward.",
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(20.dp))
-        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-            Column(Modifier.padding(18.dp)) {
-                Text(challenge.title, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(12.dp))
-                Text(challenge.pseudocode, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.secondary)
-            }
-        }
-        Spacer(Modifier.height(18.dp))
-        Text(tr("Duración de la pausa", "Pause duration"), fontWeight = FontWeight.SemiBold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(5, 15, 30).forEach { minutes ->
-                AssistChip(
-                    onClick = { onPauseMinutes(minutes) },
-                    label = { Text("$minutes min${if (pauseMinutes == minutes) " ✓" else ""}") },
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            GlowIconBadge(Icons.Rounded.SelfImprovement, size = 42.dp)
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(tr("Pausa consciente", "Mindful pause"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
+                Text(
+                    tr("La foto se procesa una sola vez y no se conserva.", "The photo is processed once and isn't kept."),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
-        Text("${tr("Intentos restantes", "Attempts left")}: $attempts", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(20.dp))
+        GradientCard(brush = UtilLockGradients.heroSoft, shape = MaterialTheme.shapes.large) {
+            Text(challenge.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+            Text(challenge.pseudocode, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.secondary)
+        }
+        Spacer(Modifier.height(20.dp))
+        Text(tr("Duración de la pausa", "Pause duration"), fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        SegmentedControl(
+            options = listOf(5 to "5 min", 15 to "15 min", 30 to "30 min"),
+            selected = pauseMinutes,
+            onSelect = onPauseMinutes,
+        )
+        Spacer(Modifier.height(14.dp))
+        Text(
+            "${tr("Intentos restantes", "Attempts left")}: $attempts",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold,
+        )
         feedback?.let {
             Spacer(Modifier.height(10.dp))
-            Text(it, color = MaterialTheme.colorScheme.primary)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(14.dp),
+            ) {
+                Text(it, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
         }
         if (!canCapture) {
             Spacer(Modifier.height(16.dp))
-            Text(
-                "${tr("La alternativa local se habilita en", "Local fallback unlocks in")} ${((waitMs + 59_999) / 60_000)} min.",
-                color = MaterialTheme.colorScheme.error,
-            )
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(14.dp),
+            ) {
+                Text(
+                    "${tr("La alternativa local se habilita en", "Local fallback unlocks in")} ${((waitMs + 59_999) / 60_000)} min.",
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(20.dp))
         if (cameraOpen && canCapture) {
             CameraCapture(
                 enabled = !evaluating,
@@ -286,20 +320,26 @@ private fun ChallengeScreen(
                 onError = { cameraOpen = false },
             )
         } else {
-            Button(
-                onClick = { cameraOpen = true },
+            PremiumButton(
+                text = tr("Tomar foto de mi respuesta", "Take a photo of my answer"),
+                icon = Icons.Rounded.CameraAlt,
+                loading = evaluating,
                 enabled = canCapture && !evaluating,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) {
-                if (evaluating) CircularProgressIndicator(modifier = Modifier.height(22.dp))
-                else {
-                    Icon(Icons.Rounded.CameraAlt, contentDescription = null)
-                    Text(tr("  Tomar foto de mi respuesta", "  Take a photo of my answer"))
-                }
-            }
+                onClick = { cameraOpen = true },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
-        Spacer(Modifier.height(10.dp))
-        OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text(tr("Cancelar", "Cancel")) }
+        Spacer(Modifier.height(14.dp))
+        Text(
+            tr("Cancelar", "Cancel"),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onCancel)
+                .padding(vertical = 14.dp),
+        )
     }
 }
 
@@ -333,10 +373,12 @@ private fun CameraCapture(enabled: Boolean, onCaptured: (File) -> Unit, onError:
                     }, ContextCompat.getMainExecutor(viewContext))
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(360.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(18.dp)),
+            modifier = Modifier.fillMaxWidth().height(360.dp).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh),
         )
-        Spacer(Modifier.height(10.dp))
-        Button(
+        Spacer(Modifier.height(12.dp))
+        PremiumButton(
+            text = tr("Usar esta foto", "Use this photo"),
+            icon = Icons.Rounded.CheckCircle,
             enabled = enabled,
             onClick = {
                 val raw = File(context.cacheDir, "challenge-${System.currentTimeMillis()}.jpg")
@@ -357,11 +399,9 @@ private fun CameraCapture(enabled: Boolean, onCaptured: (File) -> Unit, onError:
                     },
                 )
             },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-        ) {
-            Icon(Icons.Rounded.CheckCircle, contentDescription = null)
-            Text(tr("  Usar esta foto", "  Use this photo"))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            brush = UtilLockGradients.successGlow,
+        )
     }
 }
 

@@ -4,6 +4,9 @@
 .tooling/
 build/
 **/build/
+.cxx/
+.externalNativeBuild/
+captures/
 local.properties
 .env
 .env.*
@@ -12,7 +15,9 @@ local.properties
 *.keystore
 *.aab
 *.apk
+*.iml
 supabase/.branches/
 supabase/.temp/
 supabase/functions/.env
 .codex-remote-attachments/
+graphify-out/
