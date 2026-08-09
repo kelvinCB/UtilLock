@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,6 +61,8 @@ import app.utillock.android.UtilLockApplication
 import app.utillock.android.data.BackendClient
 import app.utillock.android.data.ProtectionRepository
 import app.utillock.android.model.LogicChallenge
+import app.utillock.android.ui.brand.UliMascot
+import app.utillock.android.ui.brand.UliState
 import app.utillock.android.ui.components.GlowIconBadge
 import app.utillock.android.ui.components.GradientCard
 import app.utillock.android.ui.components.PremiumButton
@@ -73,6 +76,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -107,6 +111,7 @@ private fun ChallengeRoute(
     var challenge by remember { mutableStateOf<LogicChallenge?>(null) }
     var loading by remember { mutableStateOf(true) }
     var evaluating by remember { mutableStateOf(false) }
+    var accepted by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
     var attempts by remember { mutableIntStateOf(3) }
     var pauseMinutes by remember { mutableIntStateOf(15) }
@@ -149,6 +154,7 @@ private fun ChallengeRoute(
 
     fun evaluate(file: File) {
         evaluating = true
+        accepted = false
         feedback = null
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.Main).launch {
             val current = challenge ?: return@launch
@@ -191,8 +197,10 @@ private fun ChallengeRoute(
             attempts = result.attemptsRemaining
             feedback = result.feedback
             if (result.accepted) {
+                accepted = true
                 repository.grantPause(pauseMinutes)
                 if (current.remote && !repository.snapshot().premium) repository.recordAiGrant()
+                delay(900)
                 onSuccess()
             } else if (result.attemptsRemaining <= 0) {
                 retryAt = System.currentTimeMillis() + 5 * 60_000L
@@ -207,6 +215,7 @@ private fun ChallengeRoute(
         challenge = challenge,
         loading = loading,
         evaluating = evaluating,
+        accepted = accepted,
         feedback = feedback,
         attempts = attempts,
         pauseMinutes = pauseMinutes,
@@ -221,6 +230,7 @@ private fun ChallengeScreen(
     challenge: LogicChallenge?,
     loading: Boolean,
     evaluating: Boolean,
+    accepted: Boolean,
     feedback: String?,
     attempts: Int,
     pauseMinutes: Int,
@@ -231,8 +241,12 @@ private fun ChallengeScreen(
     if (loading || challenge == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                GlowIconBadge(Icons.Rounded.SelfImprovement, size = 64.dp)
-                Spacer(Modifier.height(16.dp))
+                UliMascot(
+                    state = UliState.Thinking,
+                    modifier = Modifier.size(144.dp),
+                    contentDescription = tr("Uli prepara el reto", "Uli is preparing the challenge"),
+                )
+                Spacer(Modifier.height(4.dp))
                 CircularProgressIndicator(modifier = Modifier.height(22.dp))
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -251,12 +265,26 @@ private fun ChallengeScreen(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            GlowIconBadge(Icons.Rounded.SelfImprovement, size = 42.dp)
-            Spacer(Modifier.width(10.dp))
+            UliMascot(
+                state = if (accepted) UliState.Success else UliState.Thinking,
+                modifier = Modifier.size(64.dp),
+                contentDescription = if (accepted) {
+                    tr("Uli celebra tu respuesta", "Uli celebrates your answer")
+                } else {
+                    tr("Uli piensa contigo", "Uli is thinking with you")
+                },
+            )
+            Spacer(Modifier.width(8.dp))
             Column {
-                Text(tr("Pausa consciente", "Mindful pause"), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
                 Text(
-                    tr("La foto se procesa una sola vez y no se conserva.", "The photo is processed once and isn't kept."),
+                    if (accepted) tr("Listo. Tú decides.", "Ready. You decide.")
+                    else tr("Pausa consciente", "Mindful pause"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    if (accepted) tr("Tu pausa ya está preparada.", "Your pause is ready.")
+                    else tr("La foto se procesa una sola vez y no se conserva.", "The photo is processed once and isn't kept."),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -321,10 +349,11 @@ private fun ChallengeScreen(
             )
         } else {
             PremiumButton(
-                text = tr("Tomar foto de mi respuesta", "Take a photo of my answer"),
-                icon = Icons.Rounded.CameraAlt,
+                text = if (accepted) tr("Respuesta aceptada", "Answer accepted")
+                else tr("Tomar foto de mi respuesta", "Take a photo of my answer"),
+                icon = if (accepted) Icons.Rounded.CheckCircle else Icons.Rounded.CameraAlt,
                 loading = evaluating,
-                enabled = canCapture && !evaluating,
+                enabled = canCapture && !evaluating && !accepted,
                 onClick = { cameraOpen = true },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -337,7 +366,7 @@ private fun ChallengeScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onCancel)
+                .clickable(enabled = !accepted, onClick = onCancel)
                 .padding(vertical = 14.dp),
         )
     }

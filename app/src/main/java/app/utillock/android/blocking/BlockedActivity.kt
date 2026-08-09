@@ -36,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.utillock.android.challenge.ChallengeActivity
+import app.utillock.android.ui.brand.UliMascot
+import app.utillock.android.ui.brand.UliState
 import app.utillock.android.ui.components.PremiumButton
 import app.utillock.android.ui.theme.Ink950
 import app.utillock.android.ui.theme.UtilLockGradients
@@ -80,49 +82,17 @@ class BlockedActivity : ComponentActivity() {
 
 @Composable
 private fun BlockedScreen(blockedTarget: String, onChallenge: () -> Unit, onLeave: () -> Unit) {
-    val infinite = rememberInfiniteTransition(label = "lockPulse")
-    val pulse by infinite.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Reverse),
-        label = "pulseScale",
-    )
-    val glow by infinite.animateFloat(
-        initialValue = 0.16f,
-        targetValue = 0.32f,
-        animationSpec = infiniteRepeatable(tween(1600), RepeatMode.Reverse),
-        label = "pulseGlow",
-    )
-
     Box(
         modifier = Modifier.fillMaxSize().background(Ink950).padding(28.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .scale(pulse)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.error.copy(alpha = glow)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(84.dp)
-                        .clip(CircleShape)
-                        .background(UtilLockGradients.dangerGlow),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    androidx.compose.material3.Icon(
-                        Icons.Rounded.Lock,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(38.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.height(32.dp))
+            UliMascot(
+                state = UliState.Blocking,
+                modifier = Modifier.size(176.dp),
+                contentDescription = tr("Uli protege tu foco", "Uli is protecting your focus"),
+            )
+            Spacer(Modifier.height(16.dp))
             Text(tr("Bloqueo activo", "Block active"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(10.dp))
             Text(
@@ -134,7 +104,10 @@ private fun BlockedScreen(blockedTarget: String, onChallenge: () -> Unit, onLeav
             )
             Spacer(Modifier.height(14.dp))
             Text(
-                tr("Si de verdad necesitas entrar, resuelve un ejercicio y toma una foto de tu respuesta.", "If you truly need access, solve an exercise and take a photo of your answer."),
+                tr(
+                    "Esto puede esperar. Si de verdad necesitas entrar, resuelve un ejercicio y toma una foto de tu respuesta.",
+                    "This can wait. If you truly need access, solve an exercise and take a photo of your answer.",
+                ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )

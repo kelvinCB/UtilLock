@@ -20,4 +20,7 @@ supabase/.branches/
 supabase/.temp/
 supabase/functions/.env
 .codex-remote-attachments/
+.codex-video-frames/
+.codex-video-tools/
+inspiration-ui-temp-folder/
 graphify-out/
