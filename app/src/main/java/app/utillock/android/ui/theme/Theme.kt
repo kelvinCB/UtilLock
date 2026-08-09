@@ -68,7 +68,7 @@ val UtilLockShapes = Shapes(
 
 /** Reusable gradients for the "premium" surfaces — hero cards, primary buttons, glows. */
 object UtilLockGradients {
-    val hero = Brush.linearGradient(listOf(Violet700, Violet600, Violet400))
+    val hero = Brush.linearGradient(listOf(Navy700, Navy600, Orange400.copy(alpha = 0.85f)))
     val heroSoft = Brush.linearGradient(listOf(Ink800, Ink700))
     val primaryButton = Brush.horizontalGradient(listOf(Violet600, Violet400))
     val premium = Brush.linearGradient(listOf(Gold600, Gold400, Gold300))

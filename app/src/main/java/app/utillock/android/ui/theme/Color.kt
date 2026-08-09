@@ -10,13 +10,23 @@ val Ink700 = Color(0xFF171C38)
 val Ink600 = Color(0xFF1F2547)
 val Ink500 = Color(0xFF2A3159)
 
-// Primary — violet, the app's signature hue.
+// Primary — violet retained for legacy surfaces; Uli brand leans navy/orange.
 val Violet300 = Color(0xFFC3B4FF)
 val Violet400 = Color(0xFFA894FF)
 val Violet500 = Color(0xFF8B6BFF)
 val Violet600 = Color(0xFF7C5CFC)
 val Violet700 = Color(0xFF5B3FE0)
 val Violet900 = Color(0xFF2C1E70)
+
+// Uli brand — navy armor + orange lock aura.
+val Navy700 = Color(0xFF1B2140)
+val Navy600 = Color(0xFF243056)
+val Navy500 = Color(0xFF2F3C6A)
+val Orange400 = Color(0xFFFF7A2F)
+val Orange300 = Color(0xFFFF8A3D)
+val Lime400 = Color(0xFFA8C93A)
+val Mustard400 = Color(0xFFE8B23A)
+val Cream200 = Color(0xFFF2E6C8)
 
 // Secondary — mint/aqua for "protected / active" states.
 val Aqua300 = Color(0xFF8FF2D6)

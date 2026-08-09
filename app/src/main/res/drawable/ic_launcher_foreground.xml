@@ -3,11 +3,45 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- U antenna (lime) -->
     <path
-        android:fillColor="#7C5CFC"
-        android:pathData="M54,16 L84,28 L80,66 C78,80 67,89 54,94 C41,89 30,80 28,66 L24,28 Z" />
+        android:fillColor="#A8C93A"
+        android:pathData="M34,12 h4.5 v16.5 c0,3.2 2.2,5 5.5,5 c3.3,0 5.5,-1.8 5.5,-5 V12 H54 v16.5 c0,6.2 -4.4,10 -10,10 c-5.6,0 -10,-3.8 -10,-10 z" />
+    <!-- L antenna (mustard) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M42,39 L50,39 L50,51 L58,51 L58,39 L66,39 L66,59 L50,59 L50,69 L66,69 L66,77 L42,77 Z" />
+        android:fillColor="#E8B23A"
+        android:pathData="M60,12 h4.5 v21 H76 v4.5 H60 z" />
+    <!-- Body -->
+    <path
+        android:fillColor="#1B2140"
+        android:pathData="M30,42 C34,31 46,27 54,27 C62,27 74,31 78,42 C84,52 83,74 74,88 C68,96 60,100 54,102 C48,100 40,96 34,88 C25,74 24,52 30,42 Z" />
+    <!-- Face plate -->
+    <path
+        android:fillColor="#F2E6C8"
+        android:pathData="M39,46 C43,40 65,40 69,46 C73,52 72,64 67,70 C61,76 47,76 41,70 C36,64 35,52 39,46 Z" />
+    <!-- Eyes -->
+    <path
+        android:fillColor="#10142A"
+        android:pathData="M44,54 A3.2,4.8 0,1 0,50.4 54 A3.2,4.8 0,1 0,44 54 M57.6,54 A3.2,4.8 0,1 0,64 54 A3.2,4.8 0,1 0,57.6 54" />
+    <path
+        android:fillColor="#A8C93A"
+        android:pathData="M46.5,57 A1,1.5 0,1 0,48.5 57 A1,1.5 0,1 0,46.5 57 M60.1,57 A1,1.5 0,1 0,62.1 57 A1,1.5 0,1 0,60.1 57" />
+    <!-- Orange belt -->
+    <path
+        android:fillColor="#FF7A2F"
+        android:pathData="M33,74 C41,71 67,71 75,74 L74.2,77.2 C66,74.8 42,74.8 33.8,77.2 Z" />
+    <!-- Orange lock shield -->
+    <path
+        android:fillColor="#FF7A2F"
+        android:pathData="M48,70 C50.5,67.5 57.5,67.5 60,70 C62.2,72.2 62.5,78 60,82 C58,85 54,87.5 54,87.5 C54,87.5 50,85 48,82 C45.5,78 45.8,72.2 48,70 Z" />
+    <path
+        android:fillColor="#1B2140"
+        android:pathData="M52,74.2 A2,2 0,1 0,56 74.2 A2,2 0,1 0,52 74.2 M53.1,75.8 h1.8 v5.4 h-1.8 z" />
+    <!-- Feet -->
+    <path
+        android:fillColor="#1B2140"
+        android:pathData="M40,94 C42,92 48,92 50,94 C51,96 49,99 45,99 C41,99 39,96 40,94 Z M58,94 C60,92 66,92 68,94 C69,96 67,99 63,99 C59,99 57,96 58,94 Z" />
+    <path
+        android:fillColor="#A8C93A"
+        android:pathData="M42,97 C43.5,96 46.5,96 48,97 C48.5,98 47,99 45,99 C43,99 41.5,98 42,97 Z M60,97 C61.5,96 64.5,96 66,97 C66.5,98 65,99 63,99 C61,99 59.5,98 60,97 Z" />
 </vector>
-

@@ -98,8 +98,9 @@ import app.utillock.android.data.SessionRepository
 import app.utillock.android.data.BackendClient
 import app.utillock.android.filter.VpnController
 import app.utillock.android.model.BlockSchedule
-import app.utillock.android.model.InstalledApp
 import app.utillock.android.model.ScheduleEvaluator
+import app.utillock.android.ui.brand.UliMascot
+import app.utillock.android.ui.brand.UliState
 import app.utillock.android.ui.components.CountdownRing
 import app.utillock.android.ui.components.EmptyState
 import app.utillock.android.ui.components.FeatureRow
@@ -239,14 +240,13 @@ private fun PremiumNavBar(selected: AppTab, onSelect: (AppTab) -> Unit) {
     }
 }
 
+private const val DEFAULT_QUICK_BLOCK_MINUTES = 60
+
 @Composable
 private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val state by repository.state.collectAsState()
     val active = ScheduleEvaluator.activeProtection(state, LocalDateTime.now(), now)
-    var duration by remember { mutableIntStateOf(60) }
-    var showApps by remember { mutableStateOf(false) }
-    var showSites by remember { mutableStateOf(false) }
     var showSchedule by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     var showQuickBlockSetup by remember { mutableStateOf(false) }
@@ -260,9 +260,20 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                GlowIconBadge(Icons.Rounded.Security, size = 40.dp)
-                Spacer(Modifier.size(10.dp))
-                Text("UtilLock", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                UliMascot(
+                    state = if (active.active) UliState.Protected else UliState.Idle,
+                    modifier = Modifier.size(52.dp),
+                    contentDescription = tr("Uli, guardián del foco", "Uli, focus guardian"),
+                )
+                Spacer(Modifier.size(8.dp))
+                Column {
+                    Text("UtilLock", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                    Text(
+                        tr("Tu atención bajo cuidado", "Your attention, protected"),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
             }
         }
         item {
@@ -270,53 +281,12 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
                 state = state,
                 active = active,
                 now = now,
-                duration = duration,
                 repository = repository,
                 context = context,
                 hasBlockingConfiguration = hasBlockingConfiguration,
                 onOpenSetup = { showQuickBlockSetup = true },
                 onNeedsPermission = { showPermissionDialog = true },
             )
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                listOf(30 to "30 min", 60 to "60 min", 120 to "2 h").forEach { (minutes, label) ->
-                    val chosen = duration == minutes
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(50))
-                            .background(if (chosen) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer)
-                            .clickable { duration = minutes }
-                            .padding(vertical = 10.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            label,
-                            color = if (chosen) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                ShortcutTile(
-                    icon = Icons.Rounded.AppBlocking,
-                    label = tr("Apps", "Apps"),
-                    caption = "${state.blockedPackages.size}",
-                    modifier = Modifier.weight(1f),
-                    onClick = { showApps = true },
-                )
-                ShortcutTile(
-                    icon = Icons.Rounded.Language,
-                    label = tr("Sitios", "Sites"),
-                    caption = "${state.blockedDomains.size}",
-                    modifier = Modifier.weight(1f),
-                    onClick = { showSites = true },
-                )
-            }
         }
         item {
             SectionHeader(
@@ -343,8 +313,6 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
         }
     }
 
-    if (showApps) AppPickerDialog(repository, onDismiss = { showApps = false })
-    if (showSites) SitePickerDialog(repository, onDismiss = { showSites = false })
     if (showSchedule) ScheduleDialog(repository, onDismiss = { showSchedule = false })
     if (showQuickBlockSetup) QuickBlockSetupScreen(onBack = { showQuickBlockSetup = false })
     if (showPermissionDialog) {
@@ -377,7 +345,6 @@ private fun HeroCard(
     state: app.utillock.android.model.ProtectionState,
     active: app.utillock.android.model.ActiveProtection,
     now: Long,
-    duration: Int,
     repository: ProtectionRepository,
     context: Context,
     hasBlockingConfiguration: Boolean,
@@ -412,7 +379,7 @@ private fun HeroCard(
             if (quickActive) {
                 val remainingMs = (state.quickBlockUntilEpochMs - now).coerceAtLeast(0)
                 val remainingSeconds = remainingMs / 1000
-                val totalSeconds = (duration * 60).coerceAtLeast(1)
+                val totalSeconds = (DEFAULT_QUICK_BLOCK_MINUTES * 60).coerceAtLeast(1)
                 val fraction = (remainingSeconds.toFloat() / totalSeconds.toFloat()).coerceIn(0f, 1f)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CountdownRing(
@@ -459,20 +426,44 @@ private fun HeroCard(
                         val accessibilityReady = isAccessibilityEnabled(context)
                         val usageReady = state.usageMonitorEnabled && hasUsageAccess(context)
                         if (accessibilityReady || usageReady) {
-                            repository.setQuickBlock(duration)
+                            repository.setQuickBlock(DEFAULT_QUICK_BLOCK_MINUTES)
                         } else {
                             onNeedsPermission()
                         }
                     }
                 }
 
-                Text(
-                    tr("Recupera El Control Ya!!!!", "Take Back Control Now!!!!"),
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color.White.copy(alpha = 0.78f),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Cambia solo `state` (y `useHero`) para probar Uli en Bloqueo rápido:
+                    //   UliState.Idle + useHero=true  -> hero navy/naranja (concepto)
+                    //   UliState.Idle                 -> idle frontal
+                    //   UliState.Protected            -> burbuja naranja
+                    //   UliState.Blocking             -> mano de stop
+                    //   UliState.Thinking             -> mano en la barbilla
+                    //   UliState.Success              -> celebración
+                    //   UliState.Paused               -> aura tenue
+                    UliMascot(
+                        state = UliState.Idle,
+                        useHero = true,
+                        modifier = Modifier.size(112.dp),
+                        contentDescription = tr("Uli está listo para proteger tu foco", "Uli is ready to protect your focus"),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            tr("Yo cuido tu foco.", "I’ll guard your focus."),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            tr("Pulsa Iniciar y deja las distracciones fuera.", "Tap Start and keep distractions out."),
+                            color = Color.White.copy(alpha = 0.76f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
                 Spacer(Modifier.height(18.dp))
                 Box(
                     modifier = Modifier
@@ -1124,26 +1115,6 @@ private fun formatCountdown(totalSeconds: Long): String {
 }
 
 @Composable
-private fun ShortcutTile(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, caption: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(
-        modifier = modifier
-            .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            GlowIconBadge(icon, size = 38.dp, brush = UtilLockGradients.heroSoft)
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(label, fontWeight = FontWeight.Bold)
-                Text(caption, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
-
-@Composable
 private fun ScheduleCard(schedule: BlockSchedule, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
     GradientCard(brush = UtilLockGradients.heroSoft, shape = MaterialTheme.shapes.large) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1173,81 +1144,6 @@ private fun ScheduleCard(schedule: BlockSchedule, onToggle: (Boolean) -> Unit, o
             modifier = Modifier.clickable(onClick = onDelete),
         )
     }
-}
-
-@Composable
-private fun AppPickerDialog(repository: ProtectionRepository, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val state by repository.state.collectAsState()
-    var apps by remember { mutableStateOf(emptyList<InstalledApp>()) }
-    var query by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) { apps = loadLaunchableApps(context) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(tr("Aplicaciones a bloquear", "Apps to block"), fontWeight = FontWeight.Bold) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    query,
-                    { query = it },
-                    label = { Text(tr("Buscar", "Search")) },
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.medium,
-                )
-                LazyColumn(Modifier.height(420.dp)) {
-                    items(apps.filter { it.label.contains(query, true) }) { app ->
-                        val selected = app.packageName in state.blockedPackages
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(MaterialTheme.shapes.small)
-                                .clickable { repository.togglePackage(app.packageName) }
-                                .padding(vertical = 6.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Checkbox(checked = selected, onCheckedChange = { repository.togglePackage(app.packageName) })
-                            Text(app.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { Button(onClick = onDismiss) { Text(tr("Listo", "Done")) } },
-    )
-}
-
-@Composable
-private fun SitePickerDialog(repository: ProtectionRepository, onDismiss: () -> Unit) {
-    val state by repository.state.collectAsState()
-    var domain by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(tr("Protección de sitios", "Website protection"), fontWeight = FontWeight.Bold) },
-        text = {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(tr("Contenido para adultos", "Adult content"), fontWeight = FontWeight.SemiBold)
-                        Text(tr("Usa DNS familiar y reglas del navegador", "Uses family DNS and browser rules"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                    }
-                    Switch(checked = state.adultFilterEnabled, onCheckedChange = repository::setAdultFilter)
-                }
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(domain, { domain = it }, label = { Text("ejemplo.com") }, singleLine = true, shape = MaterialTheme.shapes.medium)
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { repository.addDomain(domain); domain = "" }, enabled = domain.isNotBlank()) { Text(tr("Añadir dominio", "Add domain")) }
-                Spacer(Modifier.height(10.dp))
-                state.blockedDomains.forEach { item ->
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-                        Text(item, modifier = Modifier.weight(1f))
-                        Text(tr("Quitar", "Remove"), color = MaterialTheme.colorScheme.error, modifier = Modifier.clickable { repository.removeDomain(item) }.padding(8.dp))
-                    }
-                }
-            }
-        },
-        confirmButton = { Button(onClick = onDismiss) { Text(tr("Listo", "Done")) } },
-    )
 }
 
 @Composable
@@ -1333,12 +1229,50 @@ private fun ProtectionScreen(repository: ProtectionRepository, modifier: Modifie
     val accessibility = remember(refresh) { isAccessibilityEnabled(context) }
     val usage = remember(refresh) { hasUsageAccess(context) }
     val notificationsReady = Build.VERSION.SDK_INT < 33 || NotificationManagerCompat.from(context).areNotificationsEnabled()
+    val blockingReady = accessibility || (usage && state.usageMonitorEnabled)
 
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp, 24.dp, 20.dp, 28.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Text(tr("Protección", "Protection"), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
             Text(tr("Android exige que actives cada capacidad de forma explícita.", "Android requires you to enable each capability explicitly."), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
+        }
+        item {
+            GradientCard(
+                brush = if (blockingReady) UtilLockGradients.hero else UtilLockGradients.heroSoft,
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    UliMascot(
+                        state = if (blockingReady) UliState.Protected else UliState.Idle,
+                        modifier = Modifier.size(88.dp),
+                        contentDescription = if (blockingReady) {
+                            tr("Uli confirma que el bloqueo está listo", "Uli confirms blocking is ready")
+                        } else {
+                            tr("Uli espera que completes la protección", "Uli is waiting for protection setup")
+                        },
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            if (blockingReady) tr("Tu foco está protegido.", "Your focus is protected.")
+                            else tr("Completemos la protección.", "Let’s finish protection."),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            if (blockingReady) {
+                                tr("Uli está listo para detener las distracciones.", "Uli is ready to stop distractions.")
+                            } else {
+                                tr("Activa Accesibilidad o el respaldo de uso.", "Enable Accessibility or Usage Access backup.")
+                            },
+                            color = Color.White.copy(alpha = 0.76f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
         }
         item {
             FeatureRow(
@@ -1589,20 +1523,6 @@ private fun ProfileScreen(
             dismissButton = { OutlinedButton(onClick = { confirmDelete = false }) { Text(tr("Cancelar", "Cancel")) } },
         )
     }
-}
-
-private suspend fun loadLaunchableApps(context: Context): List<InstalledApp> = withContext(Dispatchers.IO) {
-    val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-    val results = if (Build.VERSION.SDK_INT >= 33) {
-        context.packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
-    } else {
-        @Suppress("DEPRECATION") context.packageManager.queryIntentActivities(intent, 0)
-    }
-    results.mapNotNull { info ->
-        val packageName = info.activityInfo?.packageName ?: return@mapNotNull null
-        if (packageName == context.packageName) return@mapNotNull null
-        InstalledApp(packageName, info.loadLabel(context.packageManager).toString())
-    }.distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
 }
 
 private fun isAccessibilityEnabled(context: Context): Boolean {
