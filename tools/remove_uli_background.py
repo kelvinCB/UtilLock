@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image
 
 DRAWABLE = Path("app/src/main/res/drawable")
-BACKUP = Path("docs/assets/uli-sprites-with-bg")
+BACKUP = Path("docs/assets/uli")
 FILES = [
     "uli_hero.png",
     "uli_idle.png",

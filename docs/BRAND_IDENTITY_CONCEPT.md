@@ -16,12 +16,12 @@ cuando corresponde.
 | Rol | Hex | Uso |
 | --- | --- | --- |
 | Ink | `#05060E` | Fondo principal y contraste profundo |
-| Navy | `#1B2140` | Armadura de Uli, superficies hero y tarjetas |
+| Navy | `#1B2140` | Escudo de Uli, superficies hero y tarjetas |
 | Orange | `#FF7A2F` | Acción primaria, escudo-candado y aura |
 | Orange light | `#FF8A3D` | Brillos y protección activa |
-| Lime | `#A8C93A` | Antena U, microestados y confirmaciones visuales |
-| Mustard | `#E8B23A` | Antena L y acentos secundarios |
-| Cream | `#F2E6C8` | Rostro de Uli y texto principal cálido |
+| Lime | `#A8C93A` | Microestados, detalles de foco y confirmaciones visuales |
+| Mustard | `#E8B23A` | Detalles secundarios y acentos cálidos |
+| Cream | `#F2E6C8` | Texto principal cálido y contraste editorial |
 | Aqua | `#4CE0B3` | Estado listo/protegido y progreso positivo |
 | Rose | `#FF6B7A` | Bloqueo firme, alerta y error |
 | Gold | `#FFC857` | Pausa y funciones Premium |
@@ -35,7 +35,7 @@ debe depender únicamente del color.
 - Erizo soft-3D con hoodie naranja y escudo navy/candado dorado.
 - Avatar circular estático en el header junto al wordmark.
 - En Bloqueo rápido flota con animación premium (sin animar el logo).
-- Antenas U/L del concepto robot anterior ya no aplican.
+- Sus púas, hoodie naranja y escudo-candado son la firma visual reconocible.
 
 ## Dirección de interfaz
 
@@ -70,10 +70,10 @@ mal configurado.
 
 ## Entregables visuales
 
-- [Lámina de identidad](assets/generated/utillock-brand-identity-board.png)
-- [Concepto A — Acción primero](assets/generated/quick-block-action-first.png)
-- [Concepto B — Dial de foco](assets/generated/quick-block-focus-dial.png)
-- [Concepto C — Checklist de protección](assets/generated/quick-block-protection-checklist.png)
+- [Lámina de identidad](assets/identidad-app/utillock-brand-identity-board.png)
+- [Concepto A — Acción primero](assets/pantallas/quick-block-action-first.png)
+- [Concepto B — Dial de foco](assets/pantallas/quick-block-focus-dial.png)
+- [Concepto C — Checklist de protección](assets/pantallas/quick-block-protection-checklist.png)
 
 Estas imágenes son exploraciones visuales para decidir dirección. Antes de
 llevar una variante a Compose, hay que validar copy, estados sin configuración,
