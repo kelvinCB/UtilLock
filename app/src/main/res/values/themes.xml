@@ -7,13 +7,12 @@
         <item name="android:windowActionModeOverlay">true</item>
     </style>
 
-    <!-- Shown for an instant on cold start, before Compose takes over. Keeps the very first
-         frame the user sees on-brand instead of a flash of white/system background. -->
+    <!-- Android 12+ always draws a system splash. Match ink + shield so it handoffs
+         into BrandSplashScreen without a purple/launcher “pre-splash” beat. -->
     <style name="Theme.UtilLock.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/ink_950</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="windowSplashScreenIconBackgroundColor">@color/violet_700</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo_shield</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/ink_950</item>
         <item name="postSplashScreenTheme">@style/Theme.UtilLock</item>
     </style>
 </resources>
-
