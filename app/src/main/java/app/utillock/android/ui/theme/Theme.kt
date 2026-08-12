@@ -8,15 +8,29 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.utillock.android.R
+
+val SpaceGrotesk = FontFamily(
+    Font(R.font.space_grotesk_semibold, FontWeight.SemiBold),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+)
+
+val Inter = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+)
 
 private val UtilLockColors = darkColorScheme(
-    primary = Violet400,
-    onPrimary = Ink950,
-    primaryContainer = Violet900,
-    onPrimaryContainer = Violet300,
+    primary = Orange400,
+    onPrimary = Color.White,
+    primaryContainer = Navy700,
+    onPrimaryContainer = Cream200,
     secondary = Aqua400,
     onSecondary = Ink950,
     secondaryContainer = Color(0xFF10352E),
@@ -42,19 +56,29 @@ private val UtilLockColors = darkColorScheme(
     onErrorContainer = Rose300,
 )
 
+private fun TextStyle.brandHeadline() = copy(
+    fontFamily = SpaceGrotesk,
+    fontWeight = FontWeight.Bold,
+)
+
+private fun TextStyle.brandBody() = copy(
+    fontFamily = Inter,
+)
+
 private val UtilLockTypography = Typography().let { base ->
     Typography(
-        displayLarge = base.displayLarge.copy(fontWeight = FontWeight.Black, letterSpacing = (-0.5).sp),
-        headlineLarge = base.headlineLarge.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.4).sp),
-        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.3).sp),
-        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.Bold),
-        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp),
-        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-        titleSmall = base.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.4.sp),
-        labelMedium = base.labelMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp),
-        bodyLarge = base.bodyLarge.copy(letterSpacing = 0.1.sp),
-        bodyMedium = base.bodyMedium.copy(letterSpacing = 0.1.sp),
+        displayLarge = base.displayLarge.brandHeadline().copy(fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp),
+        headlineLarge = base.headlineLarge.brandHeadline().copy(letterSpacing = (-0.4).sp),
+        headlineMedium = base.headlineMedium.brandHeadline().copy(letterSpacing = (-0.3).sp),
+        headlineSmall = base.headlineSmall.brandHeadline(),
+        titleLarge = base.titleLarge.brandHeadline().copy(letterSpacing = (-0.2).sp),
+        titleMedium = base.titleMedium.brandHeadline().copy(fontWeight = FontWeight.SemiBold),
+        titleSmall = base.titleSmall.brandHeadline().copy(fontWeight = FontWeight.SemiBold),
+        labelLarge = base.labelLarge.brandBody().copy(fontWeight = FontWeight.Medium, letterSpacing = 0.2.sp),
+        labelMedium = base.labelMedium.brandBody().copy(fontWeight = FontWeight.Medium, letterSpacing = 0.3.sp),
+        bodyLarge = base.bodyLarge.brandBody().copy(letterSpacing = 0.1.sp),
+        bodyMedium = base.bodyMedium.brandBody().copy(letterSpacing = 0.1.sp),
+        bodySmall = base.bodySmall.brandBody(),
     )
 }
 
@@ -66,11 +90,10 @@ val UtilLockShapes = Shapes(
     extraLarge = RoundedCornerShape(36.dp),
 )
 
-/** Reusable gradients for the "premium" surfaces — hero cards, primary buttons, glows. */
 object UtilLockGradients {
-    val hero = Brush.linearGradient(listOf(Navy700, Navy600, Orange400.copy(alpha = 0.85f)))
+    val hero = Brush.linearGradient(listOf(Navy700, Navy600, Ink800))
     val heroSoft = Brush.linearGradient(listOf(Ink800, Ink700))
-    val primaryButton = Brush.horizontalGradient(listOf(Violet600, Violet400))
+    val primaryButton = Brush.horizontalGradient(listOf(Orange400, Orange300))
     val premium = Brush.linearGradient(listOf(Gold600, Gold400, Gold300))
     val successGlow = Brush.linearGradient(listOf(Aqua600, Aqua400))
     val dangerGlow = Brush.linearGradient(listOf(Color(0xFFB43B4B), Rose400))

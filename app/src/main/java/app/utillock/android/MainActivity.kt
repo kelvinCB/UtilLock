@@ -21,6 +21,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,8 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AppBlocking
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LockClock
 import androidx.compose.material.icons.rounded.Person
@@ -53,6 +56,8 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.SettingsAccessibility
 import androidx.compose.material.icons.rounded.SavedSearch
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.Workspaces
@@ -80,6 +85,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -101,6 +108,7 @@ import app.utillock.android.model.BlockSchedule
 import app.utillock.android.model.ScheduleEvaluator
 import app.utillock.android.ui.brand.UliMascot
 import app.utillock.android.ui.brand.UliState
+import app.utillock.android.ui.brand.UtilLockWordmark
 import app.utillock.android.ui.components.CountdownRing
 import app.utillock.android.ui.components.EmptyState
 import app.utillock.android.ui.components.FeatureRow
@@ -108,6 +116,12 @@ import app.utillock.android.ui.components.GlowIconBadge
 import app.utillock.android.ui.components.GradientCard
 import app.utillock.android.ui.components.PremiumButton
 import app.utillock.android.ui.components.SectionHeader
+import app.utillock.android.ui.theme.Aqua400
+import app.utillock.android.ui.theme.Ink800
+import app.utillock.android.ui.theme.Navy700
+import app.utillock.android.ui.theme.Orange300
+import app.utillock.android.ui.theme.Orange400
+import app.utillock.android.ui.theme.OrangeGlow
 import app.utillock.android.ui.theme.UtilLockGradients
 import app.utillock.android.ui.theme.UtilLockTheme
 import app.utillock.android.ui.tr
@@ -250,8 +264,9 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
     var showSchedule by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     var showQuickBlockSetup by remember { mutableStateOf(false) }
-    // A setup is considered ready only when the user has selected at least one destination.
+    var frontBlockActive by remember { mutableStateOf(false) }
     val hasBlockingConfiguration = state.blockedPackages.isNotEmpty() || state.blockedDomains.isNotEmpty()
+    val protectionReady = hasBlockingConfiguration
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -261,13 +276,15 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 UliMascot(
-                    state = if (active.active) UliState.Protected else UliState.Idle,
-                    modifier = Modifier.size(52.dp),
-                    contentDescription = tr("Uli, guardián del foco", "Uli, focus guardian"),
+                    state = UliState.Idle,
+                    useAvatar = true,
+                    animated = false,
+                    modifier = Modifier.size(48.dp),
+                    contentDescription = tr("Uli el erizo", "Uli the hedgehog"),
                 )
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(12.dp))
                 Column {
-                    Text("UtilLock", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                    UtilLockWordmark(style = MaterialTheme.typography.titleLarge)
                     Text(
                         tr("Tu atención bajo cuidado", "Your attention, protected"),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -278,15 +295,13 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
         }
         item {
             HeroCard(
-                state = state,
-                active = active,
-                now = now,
-                repository = repository,
-                context = context,
-                hasBlockingConfiguration = hasBlockingConfiguration,
+                frontBlockActive = frontBlockActive,
+                onToggleFrontBlock = { frontBlockActive = !frontBlockActive },
                 onOpenSetup = { showQuickBlockSetup = true },
-                onNeedsPermission = { showPermissionDialog = true },
             )
+        }
+        item {
+            ProtectionReadyPill(ready = protectionReady || frontBlockActive || active.active)
         }
         item {
             SectionHeader(
@@ -341,195 +356,281 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
 }
 
 @Composable
+private fun ProtectionReadyPill(ready: Boolean) {
+    val shape = RoundedCornerShape(50)
+    val mint = Color(0xFF5EF0C8)
+    val mintSoft = Color(0xFF3AD7B0)
+    val pillBg = if (ready) Color(0xFF0D1B1E) else Ink800
+    val border = if (ready) {
+        Brush.horizontalGradient(
+            listOf(
+                mint.copy(alpha = 0.45f),
+                mintSoft.copy(alpha = 0.22f),
+                mint.copy(alpha = 0.38f),
+            ),
+        )
+    } else {
+        Brush.horizontalGradient(
+            listOf(Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.06f)),
+        )
+    }
+
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier = Modifier
+                .shadow(
+                    elevation = if (ready) 10.dp else 0.dp,
+                    shape = shape,
+                    clip = false,
+                    ambientColor = mint.copy(alpha = 0.25f),
+                    spotColor = mint.copy(alpha = 0.35f),
+                )
+                .clip(shape)
+                .background(pillBg)
+                .border(width = 1.dp, brush = border, shape = shape)
+                .padding(horizontal = 16.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            if (ready) {
+                Image(
+                    painter = painterResource(R.drawable.ic_protection_ready),
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                if (ready) tr("Protección lista", "Protection ready")
+                else tr("Configura protección para empezar", "Set up protection to start"),
+                color = if (ready) mint else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+    }
+}
+
+@Composable
 private fun HeroCard(
-    state: app.utillock.android.model.ProtectionState,
-    active: app.utillock.android.model.ActiveProtection,
-    now: Long,
-    repository: ProtectionRepository,
-    context: Context,
-    hasBlockingConfiguration: Boolean,
+    frontBlockActive: Boolean,
+    onToggleFrontBlock: () -> Unit,
     onOpenSetup: () -> Unit,
-    onNeedsPermission: () -> Unit,
 ) {
-    val quickActive = state.isQuickBlockActive(now)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
-            .background(UtilLockGradients.hero)
-            .padding(24.dp),
+            .background(Navy700)
+            .padding(22.dp),
     ) {
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         tr("Bloqueo rápido", "Quick block"),
                         color = Color.White,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (frontBlockActive) {
+                            tr("Bloqueo en curso. Pulsa Detener cuando termines.", "Block running. Tap Stop when you’re done.")
+                        } else {
+                            tr("Yo cuido tu foco.", "I’ll guard your focus.")
+                        },
+                        color = Color.White.copy(alpha = 0.88f),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
-                StatusPillOnGradient(
-                    active = active.active,
-                    blockedApps = state.blockedPackages.size,
-                    blockedSites = state.blockedDomains.size,
+                UliMascot(
+                    state = if (frontBlockActive) UliState.Protected else UliState.Idle,
+                    useHero = true,
+                    animated = true,
+                    modifier = Modifier.size(118.dp),
+                    contentDescription = tr("Uli el erizo cuida tu foco", "Uli the hedgehog guards your focus"),
                 )
             }
             Spacer(Modifier.height(20.dp))
-            if (quickActive) {
-                val remainingMs = (state.quickBlockUntilEpochMs - now).coerceAtLeast(0)
-                val remainingSeconds = remainingMs / 1000
-                val totalSeconds = (DEFAULT_QUICK_BLOCK_MINUTES * 60).coerceAtLeast(1)
-                val fraction = (remainingSeconds.toFloat() / totalSeconds.toFloat()).coerceIn(0f, 1f)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CountdownRing(
-                        progress = fraction,
-                        diameter = 96.dp,
-                        strokeWidth = 8.dp,
-                        center = {
-                            Text(
-                                formatCountdown(remainingSeconds),
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold,
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                        },
-                    )
-                    Spacer(Modifier.width(20.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            tr("Bloqueo en curso", "Block in progress"),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            tr("Vuelve más tarde o detén el bloqueo si es urgente.", "Come back later, or stop the block if it's urgent."),
-                            color = Color.White.copy(alpha = 0.75f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(18.dp))
-                PremiumButton(
-                    text = tr("Detener bloqueo", "Stop block"),
-                    onClick = repository::stopQuickBlock,
-                    modifier = Modifier.fillMaxWidth(),
-                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.14f))),
+            StartStopCta(
+                active = frontBlockActive,
+                onClick = onToggleFrontBlock,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                ModeChip(
+                    iconRes = R.drawable.ic_mode_clock,
+                    label = tr("Temporizado", "Timed"),
+                    onClick = onOpenSetup,
+                    modifier = Modifier.weight(1f),
                 )
-            } else {
-                // Preview-only UI: keep the CTA enabled while the real setup flow is still pending.
-                val canStart = true
-                val startBlock = {
-                    if (!hasBlockingConfiguration) {
-                        onOpenSetup()
-                    } else {
-                        val accessibilityReady = isAccessibilityEnabled(context)
-                        val usageReady = state.usageMonitorEnabled && hasUsageAccess(context)
-                        if (accessibilityReady || usageReady) {
-                            repository.setQuickBlock(DEFAULT_QUICK_BLOCK_MINUTES)
-                        } else {
-                            onNeedsPermission()
-                        }
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Cambia solo `state` (y `useHero`) para probar Uli en Bloqueo rápido:
-                    //   UliState.Idle + useHero=true  -> hero navy/naranja (concepto)
-                    //   UliState.Idle                 -> idle frontal
-                    //   UliState.Protected            -> burbuja naranja
-                    //   UliState.Blocking             -> mano de stop
-                    //   UliState.Thinking             -> mano en la barbilla
-                    //   UliState.Success              -> celebración
-                    //   UliState.Paused               -> aura tenue
-                    UliMascot(
-                        state = UliState.Idle,
-                        useHero = true,
-                        modifier = Modifier.size(112.dp),
-                        contentDescription = tr("Uli está listo para proteger tu foco", "Uli is ready to protect your focus"),
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            tr("Yo cuido tu foco.", "I’ll guard your focus."),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            tr("Pulsa Iniciar y deja las distracciones fuera.", "Tap Start and keep distractions out."),
-                            color = Color.White.copy(alpha = 0.76f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(18.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(82.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(Color(0xFF3395F4).copy(alpha = if (canStart) 1f else 0.45f))
-                        .clickable(enabled = canStart, onClick = startBlock),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                        Icon(
-                            imageVector = Icons.Rounded.PlayArrow,
-                            contentDescription = tr("Iniciar bloqueo", "Start block"),
-                            tint = Color.White,
-                            modifier = Modifier.size(42.dp),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            tr("Iniciar", "Start"),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(18.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    DemoBlockMode(
-                        icon = Icons.Rounded.LockClock,
-                        label = tr("Temporizado", "Timed"),
-                        onClick = onOpenSetup,
-                        modifier = Modifier.weight(1f),
-                    )
-                    DemoBlockMode(
-                        icon = Icons.Rounded.Bolt,
-                        label = "Pomodoro",
-                        onClick = onOpenSetup,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                ModeChip(
+                    iconRes = R.drawable.ic_mode_tomato,
+                    label = "Pomodoro",
+                    onClick = onOpenSetup,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DemoBlockMode(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun StartStopCta(
+    active: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val shape = RoundedCornerShape(50)
+    val fill = if (active) {
+        Brush.horizontalGradient(
+            listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.10f)),
+        )
+    } else {
+        Brush.horizontalGradient(listOf(Orange400, OrangeGlow, Orange300))
+    }
+    val stroke = if (active) {
+        Brush.horizontalGradient(
+            listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.12f)),
+        )
+    } else {
+        Brush.horizontalGradient(
+            listOf(Color.White.copy(alpha = 0.65f), OrangeGlow, Color.White.copy(alpha = 0.28f)),
+        )
+    }
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        // Soft outer glow bloom (design “halo”).
+        if (!active) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+                    .shadow(
+                        elevation = 22.dp,
+                        shape = shape,
+                        clip = false,
+                        ambientColor = Orange400.copy(alpha = 0.55f),
+                        spotColor = OrangeGlow.copy(alpha = 0.9f),
+                    )
+                    .background(Orange400.copy(alpha = 0.22f), shape),
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .shadow(
+                    elevation = if (active) 6.dp else 16.dp,
+                    shape = shape,
+                    clip = false,
+                    ambientColor = if (active) Color.Black.copy(alpha = 0.25f) else Orange400.copy(alpha = 0.65f),
+                    spotColor = if (active) Color.Black.copy(alpha = 0.35f) else OrangeGlow.copy(alpha = 0.95f),
+                )
+                .clip(shape)
+                .background(fill)
+                .border(width = 1.6.dp, brush = stroke, shape = shape)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = CircleShape,
+                        clip = false,
+                        ambientColor = Color.Black.copy(alpha = 0.25f),
+                        spotColor = Color.Black.copy(alpha = 0.3f),
+                    )
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (active) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
+                    contentDescription = null,
+                    tint = Orange400,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                if (active) tr("Detener bloqueo", "Stop block") else tr("Iniciar", "Start"),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModeChip(
+    iconRes: Int,
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val shape = RoundedCornerShape(50)
+    // Match design: deep navy chip with subtle luminous rim (not washed gray).
+    val chipFill = Color(0xFF151B31)
+    val chipBorder = Brush.horizontalGradient(
+        listOf(
+            Color.White.copy(alpha = 0.22f),
+            Color.White.copy(alpha = 0.10f),
+            Color.White.copy(alpha = 0.18f),
+        ),
+    )
     Row(
         modifier = modifier
-            .height(66.dp)
-            .clip(RoundedCornerShape(50))
-            .background(Color.White.copy(alpha = 0.12f))
+            .height(58.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = shape,
+                clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.35f),
+                spotColor = Color.Black.copy(alpha = 0.45f),
+            )
+            .clip(shape)
+            .background(chipFill)
+            .border(width = 1.dp, brush = chipBorder, shape = shape)
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(label, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            label,
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+        )
     }
 }
 

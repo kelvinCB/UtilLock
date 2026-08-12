@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Elegant yellow clock outline -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#F5C542"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M12,12m-8.2,0a8.2,8.2 0,1 1,16.4 0a8.2,8.2 0,1 1,-16.4 0" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#F5C542"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M12,7.2 L12,12 L15.6,14.2" />
+</vector>
