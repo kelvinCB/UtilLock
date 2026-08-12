@@ -116,6 +116,7 @@ import app.utillock.android.ui.components.GlowIconBadge
 import app.utillock.android.ui.components.GradientCard
 import app.utillock.android.ui.components.PremiumButton
 import app.utillock.android.ui.components.SectionHeader
+import app.utillock.android.ui.onboarding.WelcomeScreen
 import app.utillock.android.ui.theme.Aqua400
 import app.utillock.android.ui.theme.Ink800
 import app.utillock.android.ui.theme.Navy700
@@ -128,17 +129,24 @@ import app.utillock.android.ui.tr
 import app.utillock.android.ui.currentLanguage
 import app.utillock.android.ui.setLanguage
 import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.SideEffect
 
 class MainActivity : ComponentActivity() {
     private val container by lazy { (application as UtilLockApplication).container }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        // Hold the system splash until our Compose brand splash is on screen,
+        // so the default icon frame never appears as a separate beat.
+        val keepSystemSplash = AtomicBoolean(true)
+        splashScreen.setKeepOnScreenCondition { keepSystemSplash.get() }
+
         lifecycleScope.launch { container.sessionRepository.importAuthRedirect(intent.data) }
         container.billingRepository.connect()
         lifecycleScope.launch {
@@ -148,12 +156,32 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             UtilLockTheme {
-                UtilLockApp(
-                    container.protectionRepository,
-                    container.sessionRepository,
-                    container.backendClient,
-                    container.billingRepository,
-                )
+                val protection = container.protectionRepository
+                val protectionState by protection.state.collectAsState()
+                var showBrandSplash by remember { mutableStateOf(true) }
+
+                LaunchedEffect(Unit) {
+                    protection.awaitLoaded()
+                    delay(900L)
+                    showBrandSplash = false
+                }
+
+                when {
+                    showBrandSplash -> {
+                        SideEffect { keepSystemSplash.set(false) }
+                        BrandSplashScreen()
+                    }
+                    !protectionState.onboardingComplete -> WelcomeScreen(
+                        onStart = { protection.completeOnboarding() },
+                        onAlreadyMember = { protection.completeOnboarding() },
+                    )
+                    else -> UtilLockApp(
+                        protection,
+                        container.sessionRepository,
+                        container.backendClient,
+                        container.billingRepository,
+                    )
+                }
             }
         }
     }
@@ -163,6 +191,16 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         lifecycleScope.launch { container.sessionRepository.importAuthRedirect(intent.data) }
     }
+}
+
+@Composable
+private fun BrandSplashScreen() {
+    Image(
+        painter = painterResource(R.drawable.splash_shield),
+        contentDescription = "UtilLock",
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.Crop,
+    )
 }
 
 private enum class AppTab(val es: String, val en: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
