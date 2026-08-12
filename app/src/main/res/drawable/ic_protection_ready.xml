@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Mint shield -->
+    <path
+        android:fillColor="#5EF0C8"
+        android:pathData="M12,2.8 C13.6,3.5 16.2,4.1 18.2,4.5 C18.2,10.6 17.1,15.4 12,20.2 C6.9,15.4 5.8,10.6 5.8,4.5 C7.8,4.1 10.4,3.5 12,2.8 Z" />
+    <!-- Dark check cutout -->
+    <path
+        android:fillColor="#0B1618"
+        android:pathData="M10.55,13.85 L8.4,11.7 L7.2,12.9 L10.55,16.25 L16.7,10.1 L15.5,8.9 Z" />
+</vector>
