@@ -137,13 +137,16 @@ fun WelcomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(36.dp))
-            Text(
-                text = tr("Bienvenido a UtilLock", "Welcome to UtilLock"),
-                color = TextMuted,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
+            Image(
+                painter = painterResource(R.drawable.imagotipo_shield_lock),
+                contentDescription = "UtilLock",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(104.dp)
+                    .padding(horizontal = 8.dp),
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = tr(
                     "Recupera el control\nde tu atención.",
