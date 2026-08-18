@@ -1,7 +1,6 @@
 package app.utillock.android.ui.onboarding
 
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -61,6 +60,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.core.net.toUri
 import app.utillock.android.R
 import app.utillock.android.ui.theme.Aqua300
 import app.utillock.android.ui.theme.Orange300
@@ -192,8 +192,8 @@ fun WelcomeScreen(
 
             Spacer(Modifier.height(20.dp))
             LegalFooter(
-                onOpenTerms = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(TERMS_URL))) },
-                onOpenPrivacy = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_URL))) },
+                onOpenTerms = { context.startActivity(Intent(Intent.ACTION_VIEW, TERMS_URL.toUri())) },
+                onOpenPrivacy = { context.startActivity(Intent(Intent.ACTION_VIEW, PRIVACY_URL.toUri())) },
             )
             Spacer(Modifier.height(28.dp))
         }
@@ -258,16 +258,16 @@ private fun AliveStartButton(
                 )
                 drawRoundRect(
                     color = Orange400.copy(alpha = 0.35f * bloom),
-                    cornerRadius = CornerRadius(r * 1.2f, r * 1.2f),
-                    topLeft = Offset(-10f, -8f),
-                    size = Size(size.width + 20f, size.height + 22f),
+                    cornerRadius = CornerRadius(r * 1.1f, r * 1.1f),
+                    topLeft = Offset(-4f, -3f),
+                    size = Size(size.width + 8f, size.height + 10f),
                 )
             }
             .shadow(
-                elevation = 28.dp,
+                elevation = 12.dp,
                 shape = shape,
-                ambientColor = Orange400.copy(alpha = 0.75f),
-                spotColor = OrangeGlow.copy(alpha = 0.95f),
+                ambientColor = Orange400.copy(alpha = 0.55f),
+                spotColor = OrangeGlow.copy(alpha = 0.72f),
             )
             .clip(shape)
             .background(fill)

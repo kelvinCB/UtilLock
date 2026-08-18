@@ -120,12 +120,9 @@ fun UliMascot(
     val drawable = remember(state, useHero, useAvatar) {
         when {
             useAvatar -> R.drawable.uli_avatar
-            useHero && state == UliState.Idle -> R.drawable.uli_hero
-            state == UliState.Protected -> R.drawable.uli_protected
-            state == UliState.Blocking -> R.drawable.uli_blocking
-            state == UliState.Thinking -> R.drawable.uli_thinking
-            state == UliState.Success -> R.drawable.uli_success
-            state == UliState.Paused -> R.drawable.uli_paused
+            // All current non-avatar mascot states share the same raster asset.
+            // Keep state in the key so state-specific art can be restored later
+            // without changing the composable's invalidation behavior.
             else -> R.drawable.uli_idle
         }
     }
