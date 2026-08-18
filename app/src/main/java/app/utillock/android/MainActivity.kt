@@ -95,6 +95,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
@@ -106,6 +107,7 @@ import app.utillock.android.data.BackendClient
 import app.utillock.android.filter.VpnController
 import app.utillock.android.model.BlockSchedule
 import app.utillock.android.model.ScheduleEvaluator
+import app.utillock.android.model.parseMinute
 import app.utillock.android.ui.brand.UliMascot
 import app.utillock.android.ui.brand.UliState
 import app.utillock.android.ui.brand.UtilLockWordmark
@@ -302,7 +304,7 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
     var showSchedule by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
     var showQuickBlockSetup by remember { mutableStateOf(false) }
-    var frontBlockActive by remember { mutableStateOf(false) }
+    val quickBlockActive = state.isQuickBlockActive(now)
     val hasBlockingConfiguration = state.blockedPackages.isNotEmpty() || state.blockedDomains.isNotEmpty()
     val protectionReady = hasBlockingConfiguration
 
@@ -333,13 +335,16 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
         }
         item {
             HeroCard(
-                frontBlockActive = frontBlockActive,
-                onToggleFrontBlock = { frontBlockActive = !frontBlockActive },
+                frontBlockActive = quickBlockActive,
+                onToggleFrontBlock = {
+                    if (quickBlockActive) repository.stopQuickBlock()
+                    else repository.setQuickBlock(DEFAULT_QUICK_BLOCK_MINUTES)
+                },
                 onOpenSetup = { showQuickBlockSetup = true },
             )
         }
         item {
-            ProtectionReadyPill(ready = protectionReady || frontBlockActive || active.active)
+            ProtectionReadyPill(ready = protectionReady || quickBlockActive || active.active)
         }
         item {
             SectionHeader(
@@ -349,6 +354,7 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
                     GlowIconBadge(
                         icon = Icons.Rounded.Add,
                         size = 40.dp,
+                        contentDescription = tr("Crear programación", "Create schedule"),
                         modifier = Modifier.clickable { showSchedule = true },
                     )
                 },
@@ -1293,7 +1299,9 @@ private fun ScheduleDialog(repository: ProtectionRepository, onDismiss: () -> Un
     var end by remember { mutableStateOf("17:00") }
     var adult by remember { mutableStateOf(state.adultFilterEnabled) }
     var days by remember { mutableStateOf(setOf(1, 2, 3, 4, 5)) }
-    val valid = parseMinute(start) != null && parseMinute(end) != null && name.isNotBlank() && days.isNotEmpty()
+    val startMinute = parseMinute(start)
+    val endMinute = parseMinute(end)
+    val valid = startMinute != null && endMinute != null && name.isNotBlank() && days.isNotEmpty()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(tr("Nueva programación", "New schedule"), fontWeight = FontWeight.Bold) },
@@ -1333,11 +1341,13 @@ private fun ScheduleDialog(repository: ProtectionRepository, onDismiss: () -> Un
             Button(
                 enabled = valid,
                 onClick = {
+                    val safeStartMinute = startMinute ?: return@Button
+                    val safeEndMinute = endMinute ?: return@Button
                     repository.addSchedule(
                         BlockSchedule(
                             name = name.trim(),
-                            startMinute = parseMinute(start)!!,
-                            endMinute = parseMinute(end)!!,
+                            startMinute = safeStartMinute,
+                            endMinute = safeEndMinute,
                             days = days,
                             packages = state.blockedPackages,
                             domains = state.blockedDomains,
@@ -1549,7 +1559,7 @@ private fun ProfileScreen(
                         scope.launch {
                             val url = sessions.googleLinkUrl()
                             if (url == null) accountMessage = setupAccountMessage
-                            else context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            else context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
                         }
                     },
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
@@ -1674,15 +1684,6 @@ private fun hasUsageAccess(context: Context): Boolean {
     val appOps = context.getSystemService(AppOpsManager::class.java)
     val mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), context.packageName)
     return mode == AppOpsManager.MODE_ALLOWED
-}
-
-private fun parseMinute(value: String): Int? {
-    val parts = value.split(':')
-    if (parts.size != 2) return null
-    val hour = parts[0].toIntOrNull() ?: return null
-    val minute = parts[1].toIntOrNull() ?: return null
-    if (hour !in 0..23 || minute !in 0..59) return null
-    return hour * 60 + minute
 }
 
 private fun formatMinute(value: Int): String = "%02d:%02d".format(value / 60, value % 60)

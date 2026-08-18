@@ -43,4 +43,39 @@ class ScheduleEvaluatorTest {
         assertEquals(setOf("one.app", "two.app"), active.packages)
         assertEquals(setOf("one.example", "two.example"), active.domains)
     }
+
+    @Test
+    fun quickBlockUsesConfiguredTargetsAndPauseWins() {
+        val state = ProtectionState(
+            blockedPackages = setOf("com.example.focus"),
+            blockedDomains = setOf("example.com"),
+            quickBlockUntilEpochMs = 10_000,
+            pauseUntilEpochMs = 0,
+        )
+
+        val active = ScheduleEvaluator.activeProtection(
+            state = state,
+            now = LocalDateTime.of(2026, 7, 20, 10, 0),
+            nowEpochMs = 1_000,
+        )
+        assertTrue(active.active)
+        assertEquals(setOf("com.example.focus"), active.packages)
+        assertEquals(setOf("example.com"), active.domains)
+
+        val paused = ScheduleEvaluator.activeProtection(
+            state = state.copy(pauseUntilEpochMs = 20_000),
+            now = LocalDateTime.of(2026, 7, 20, 10, 0),
+            nowEpochMs = 1_000,
+        )
+        assertFalse(paused.active)
+    }
+
+    @Test
+    fun parseMinuteRejectsMalformedAndOutOfRangeInput() {
+        assertEquals(9 * 60 + 5, parseMinute(" 09:05 "))
+        assertEquals(23 * 60 + 59, parseMinute("23:59"))
+        assertEquals(null, parseMinute("24:00"))
+        assertEquals(null, parseMinute("09:60"))
+        assertEquals(null, parseMinute("09"))
+    }
 }
