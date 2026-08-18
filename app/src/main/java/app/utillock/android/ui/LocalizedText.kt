@@ -1,3 +1,5 @@
+@file:Suppress("ComposableNaming")
+
 package app.utillock.android.ui
 
 import androidx.compose.runtime.Composable
@@ -5,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.edit
 
 private const val LANGUAGE_PREFS = "ui_preferences"
 private const val LANGUAGE_KEY = "language"
@@ -30,10 +33,9 @@ fun currentLanguage(): String {
 
 fun setLanguage(context: android.content.Context, language: String) {
     LanguagePreference.language = language
-    context.getSharedPreferences(LANGUAGE_PREFS, 0)
-        .edit()
-        .putString(LANGUAGE_KEY, language)
-        .apply()
+    context.getSharedPreferences(LANGUAGE_PREFS, 0).edit {
+        putString(LANGUAGE_KEY, language)
+    }
 }
 
 @Composable

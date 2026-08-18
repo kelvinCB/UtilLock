@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.core.net.toUri
 import app.utillock.android.BuildConfig
 import java.net.HttpURLConnection
 import java.net.URL
@@ -84,7 +85,7 @@ class SessionRepository(private val context: Context) {
 
     suspend fun importAuthRedirect(uri: Uri?): Boolean {
         if (uri?.scheme != "utillock" || uri.host != "auth-callback") return false
-        val values = Uri.parse("https://auth.local/?${uri.fragment.orEmpty()}")
+        val values = "https://auth.local/?${uri.fragment.orEmpty()}".toUri()
         val access = values.getQueryParameter("access_token") ?: return false
         val refresh = values.getQueryParameter("refresh_token") ?: return false
         val expiresIn = values.getQueryParameter("expires_in")?.toLongOrNull() ?: 3_600

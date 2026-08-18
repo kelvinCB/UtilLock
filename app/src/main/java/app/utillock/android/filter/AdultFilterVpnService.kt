@@ -5,9 +5,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import app.utillock.android.MainActivity
 import app.utillock.android.R
 import app.utillock.android.UtilLockApplication
@@ -33,7 +35,12 @@ class AdultFilterVpnService : VpnService() {
             stopSelf()
             return START_NOT_STICKY
         }
-        startForeground(NOTIFICATION_ID, notification())
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST,
+        )
         if (running.compareAndSet(false, true)) startTunnel()
         return START_STICKY
     }

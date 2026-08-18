@@ -9,4 +9,8 @@
     <string name="usage_notification_title">Backup blocking active</string>
     <string name="usage_notification_text">UtilLock is checking the visible app.</string>
     <string name="usage_notification_channel">Blocking backup</string>
+    <string name="blocking_active">BLOCKING ACTIVE</string>
+    <string name="blocking_challenge_message">Solve the logic exercise to request a pause.</string>
+    <string name="solve_exercise">Solve exercise</string>
+    <string name="go_home">Go home</string>
 </resources>

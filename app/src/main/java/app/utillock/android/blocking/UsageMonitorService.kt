@@ -8,9 +8,11 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import app.utillock.android.MainActivity
 import app.utillock.android.R
 import app.utillock.android.UtilLockApplication
@@ -34,7 +36,12 @@ class UsageMonitorService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        startForeground(NOTIFICATION_ID, notification())
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST,
+        )
         if (running.compareAndSet(false, true)) {
             thread(name = "utillock-usage", isDaemon = true, block = ::monitorLoop)
         }

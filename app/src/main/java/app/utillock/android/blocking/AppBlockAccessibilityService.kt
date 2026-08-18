@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import app.utillock.android.R
 import app.utillock.android.UtilLockApplication
 import app.utillock.android.challenge.ChallengeActivity
 import app.utillock.android.model.DomainMatcher
@@ -89,7 +90,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
             }
         }
         card.addView(TextView(this).apply {
-            text = "BLOQUEO ACTIVO"
+            text = getString(R.string.blocking_active)
             textSize = 24f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
@@ -102,13 +103,13 @@ class AppBlockAccessibilityService : AccessibilityService() {
             setPadding(0, dp(12), 0, dp(7))
         }, LinearLayout.LayoutParams(-1, -2))
         card.addView(TextView(this).apply {
-            text = "Resuelve el ejercicio de logica para solicitar una pausa."
+            text = getString(R.string.blocking_challenge_message)
             textSize = 16f
             setTextColor(Color.LTGRAY)
             gravity = Gravity.CENTER
         }, LinearLayout.LayoutParams(-1, -2))
         card.addView(Button(this).apply {
-            text = "Resolver ejercicio"
+            text = getString(R.string.solve_exercise)
             setOnClickListener {
                 hideOverlay()
                 startActivity(Intent(this@AppBlockAccessibilityService, ChallengeActivity::class.java).apply {
@@ -117,7 +118,7 @@ class AppBlockAccessibilityService : AccessibilityService() {
             }
         }, LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(16) })
         card.addView(Button(this).apply {
-            text = "Volver al inicio"
+            text = getString(R.string.go_home)
             setOnClickListener {
                 hideOverlay()
                 performGlobalAction(GLOBAL_ACTION_HOME)
