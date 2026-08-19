@@ -118,6 +118,7 @@ import app.utillock.android.ui.components.GlowIconBadge
 import app.utillock.android.ui.components.GradientCard
 import app.utillock.android.ui.components.PremiumButton
 import app.utillock.android.ui.components.SectionHeader
+import app.utillock.android.ui.onboarding.CreateAccountScreen
 import app.utillock.android.ui.onboarding.WelcomeScreen
 import app.utillock.android.ui.theme.Aqua400
 import app.utillock.android.ui.theme.Ink800
@@ -161,6 +162,8 @@ class MainActivity : ComponentActivity() {
                 val protection = container.protectionRepository
                 val protectionState by protection.state.collectAsState()
                 var showBrandSplash by remember { mutableStateOf(true) }
+                var onboardingStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
+                var returningMember by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     protection.awaitLoaded()
@@ -173,10 +176,25 @@ class MainActivity : ComponentActivity() {
                         SideEffect { keepSystemSplash.set(false) }
                         BrandSplashScreen()
                     }
-                    !protectionState.onboardingComplete -> WelcomeScreen(
-                        onStart = { protection.completeOnboarding() },
-                        onAlreadyMember = { protection.completeOnboarding() },
-                    )
+                    !protectionState.onboardingComplete -> when (onboardingStep) {
+                        OnboardingStep.WELCOME -> WelcomeScreen(
+                            onStart = {
+                                returningMember = false
+                                onboardingStep = OnboardingStep.ACCOUNT
+                            },
+                            onAlreadyMember = {
+                                returningMember = true
+                                onboardingStep = OnboardingStep.ACCOUNT
+                            },
+                        )
+                        OnboardingStep.ACCOUNT -> CreateAccountScreen(
+                            sessions = container.sessionRepository,
+                            returningMember = returningMember,
+                            onBack = { onboardingStep = OnboardingStep.WELCOME },
+                            onContinueWithoutAccount = { protection.completeOnboarding() },
+                            onAccountCreated = { protection.completeOnboarding() },
+                        )
+                    }
                     else -> UtilLockApp(
                         protection,
                         container.sessionRepository,
@@ -209,6 +227,11 @@ private enum class AppTab(val es: String, val en: String, val icon: androidx.com
     BLOCK("Bloqueo", "Block", Icons.Rounded.Shield),
     PROTECTION("Protección", "Protection", Icons.Rounded.VerifiedUser),
     PROFILE("Perfil", "Profile", Icons.Rounded.Person),
+}
+
+private enum class OnboardingStep {
+    WELCOME,
+    ACCOUNT,
 }
 
 @Composable
@@ -373,16 +396,24 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
     }
 
     if (showSchedule) ScheduleDialog(repository, onDismiss = { showSchedule = false })
-    if (showQuickBlockSetup) QuickBlockSetupScreen(onBack = { showQuickBlockSetup = false })
+    if (showQuickBlockSetup) {
+        QuickBlockSetupScreen(
+            onBack = { showQuickBlockSetup = false },
+            onSaved = { hasSelectedApps ->
+                showQuickBlockSetup = false
+                showPermissionDialog = hasSelectedApps && !isAccessibilityEnabled(context)
+            },
+        )
+    }
     if (showPermissionDialog) {
         AlertDialog(
             onDismissRequest = { showPermissionDialog = false },
-            title = { Text(tr("Activa el permiso de bloqueo", "Enable blocking access")) },
+            title = { Text(tr("El bloqueo no puede funcionar", "Blocking can't work")) },
             text = {
                 Text(
                     tr(
-                        "Para bloquear aplicaciones debes activar Accesibilidad en Ajustes. Android no concede este permiso automáticamente. Después vuelve a UtilLock y pulsa Iniciar.",
-                        "To block apps, enable Accessibility in Settings. Android does not grant this access automatically. Return to UtilLock and tap Start.",
+                        "Seleccionaste apps para bloquear, pero UtilLock todavía no tiene activada la Accesibilidad. Actívala en Ajustes para que el bloqueo pueda funcionar.",
+                        "You selected apps to block, but UtilLock does not have Accessibility enabled yet. Enable it in Settings so blocking can work.",
                     ),
                 )
             },
@@ -390,10 +421,10 @@ private fun DashboardScreen(repository: ProtectionRepository, now: Long, modifie
                 Button(onClick = {
                     showPermissionDialog = false
                     context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                }) { Text(tr("Abrir Ajustes", "Open Settings")) }
+                }) { Text(tr("Activar", "Enable")) }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showPermissionDialog = false }) { Text(tr("Cancelar", "Cancel")) }
+                OutlinedButton(onClick = { showPermissionDialog = false }) { Text(tr("Ahora no", "Not now")) }
             },
         )
     }
@@ -679,7 +710,7 @@ private fun ModeChip(
 }
 
 @Composable
-private fun QuickBlockSetupScreen(onBack: () -> Unit) {
+private fun QuickBlockSetupScreen(onBack: () -> Unit, onSaved: (hasSelectedApps: Boolean) -> Unit) {
     var blockAdultContent by remember { mutableStateOf(false) }
     var blockPurchases by remember { mutableStateOf(false) }
     var blockUnsupportedBrowsers by remember { mutableStateOf(false) }
@@ -841,7 +872,10 @@ private fun QuickBlockSetupScreen(onBack: () -> Unit) {
         if (showBlockingList) {
             BlockingListScreen(
                 onBack = { showBlockingList = false },
-                onSave = { showBlockingList = false },
+                onSave = { hasSelectedApps ->
+                    showBlockingList = false
+                    onSaved(hasSelectedApps)
+                },
             )
         }
     }
@@ -986,7 +1020,7 @@ private fun BlockingCategoryIntro(category: String, onBack: () -> Unit, onAllow:
 }
 
 @Composable
-private fun BlockingListScreen(onBack: () -> Unit, onSave: () -> Unit) {
+private fun BlockingListScreen(onBack: () -> Unit, onSave: (hasSelectedApps: Boolean) -> Unit) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedCategories by remember { mutableStateOf(setOf<String>()) }
     var expandedCategories by remember { mutableStateOf(setOf<String>()) }
@@ -1005,6 +1039,7 @@ private fun BlockingListScreen(onBack: () -> Unit, onSave: () -> Unit) {
         Triple("utilities", Icons.Rounded.AppBlocking, tr("Utilidades", "Utilities")),
         Triple("other", Icons.Rounded.Workspaces, tr("Otros", "Other")),
     )
+    // UtilLock is intentionally absent: it must always remain reachable while blocking.
     val appsByCategory = mapOf(
         "social" to listOf("Instagram", "TikTok", "WhatsApp", "Snapchat"),
         "games" to listOf("Astro Builder", "Balls Bounce!", "Bee Factory", "Clash of Clans", "Clash Royale", "coin_toss", "Contexto"),
@@ -1139,7 +1174,7 @@ private fun BlockingListScreen(onBack: () -> Unit, onSave: () -> Unit) {
             }
         }
         Button(
-            onClick = onSave,
+            onClick = { onSave(selectedApps.isNotEmpty()) },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()

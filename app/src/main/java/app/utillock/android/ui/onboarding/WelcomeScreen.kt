@@ -113,8 +113,8 @@ private val Sparkles = listOf(
     Sparkle(0.33f, 0.9f, 0.58f, 3.6f, false),
 )
 
-private const val TERMS_URL = "https://utillock.app/terms"
-private const val PRIVACY_URL = "https://utillock.app/privacy"
+internal const val TERMS_URL = "https://utillock.app/terms"
+internal const val PRIVACY_URL = "https://utillock.app/privacy"
 
 /**
  * Post-splash welcome — Ink mascot with soft-3D floating distraction bubbles
@@ -321,7 +321,7 @@ private fun AliveStartButton(
 
 /** Deep-space plate: near-black field, faint stars, orange left + cyan right blooms. */
 @Composable
-private fun WelcomeSpaceBackdrop(modifier: Modifier = Modifier) {
+internal fun WelcomeSpaceBackdrop(modifier: Modifier = Modifier) {
     val stars = remember {
         val rng = Random(42)
         List(72) {
@@ -405,7 +405,7 @@ private data class StarSpec(
 )
 
 @Composable
-private fun LegalFooter(
+internal fun LegalFooter(
     onOpenTerms: () -> Unit,
     onOpenPrivacy: () -> Unit,
 ) {

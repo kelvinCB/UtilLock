@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import app.utillock.android.model.BlockSchedule
 import app.utillock.android.model.ProtectionState
+import app.utillock.android.model.UTILLOCK_PACKAGE_NAME
+import app.utillock.android.model.excludingUtilLock
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,26 +38,28 @@ class ProtectionRepository(private val context: Context) {
             context.utilLockDataStore.data
                 .map { preferences -> preferences[stateKey]?.let(::decode) ?: ProtectionState() }
                 .collect { loaded ->
-                    current.set(loaded)
-                    mutableState.value = loaded
+                    val sanitized = sanitize(loaded)
+                    current.set(sanitized)
+                    mutableState.value = sanitized
                 }
         }
     }
 
-    fun snapshot(): ProtectionState = current.get()
+    fun snapshot(): ProtectionState = sanitize(current.get())
 
     suspend fun awaitLoaded(): ProtectionState {
         val preferences = context.utilLockDataStore.data.first()
         val loaded = preferences[stateKey]?.let(::decode) ?: ProtectionState()
-        current.set(loaded)
-        mutableState.value = loaded
-        return loaded
+        val sanitized = sanitize(loaded)
+        current.set(sanitized)
+        mutableState.value = sanitized
+        return sanitized
     }
 
     fun update(transform: (ProtectionState) -> ProtectionState) {
         scope.launch {
             writeMutex.withLock {
-                val next = transform(current.get())
+                val next = sanitize(transform(current.get()))
                 // Publish immediately so the accessibility service sees a newly
                 // started quick block without waiting for DataStore's collector.
                 current.set(next)
@@ -77,11 +81,14 @@ class ProtectionRepository(private val context: Context) {
         it.copy(pauseUntilEpochMs = System.currentTimeMillis() + durationMinutes * 60_000L)
     }
 
-    fun togglePackage(packageName: String) = update { state ->
-        val next = state.blockedPackages.toMutableSet().apply {
-            if (!add(packageName)) remove(packageName)
+    fun togglePackage(packageName: String) {
+        if (packageName == context.packageName || packageName == UTILLOCK_PACKAGE_NAME) return
+        update { state ->
+            val next = state.blockedPackages.toMutableSet().apply {
+                if (!add(packageName)) remove(packageName)
+            }
+            state.copy(blockedPackages = next)
         }
-        state.copy(blockedPackages = next)
     }
 
     fun addDomain(domain: String) = update { state ->
@@ -93,7 +100,11 @@ class ProtectionRepository(private val context: Context) {
     fun setAdultFilter(enabled: Boolean) = update { it.copy(adultFilterEnabled = enabled) }
     fun setDnsVpn(enabled: Boolean) = update { it.copy(dnsVpnEnabled = enabled) }
     fun setUsageMonitor(enabled: Boolean) = update { it.copy(usageMonitorEnabled = enabled) }
-    fun addSchedule(schedule: BlockSchedule) = update { it.copy(schedules = it.schedules + schedule) }
+    fun addSchedule(schedule: BlockSchedule) = update {
+        it.copy(schedules = it.schedules + schedule.copy(
+            packages = schedule.packages.excludingUtilLock(context.packageName),
+        ))
+    }
     fun removeSchedule(id: String) = update { it.copy(schedules = it.schedules.filterNot { item -> item.id == id }) }
     fun setScheduleEnabled(id: String, enabled: Boolean) = update {
         it.copy(schedules = it.schedules.map { item -> if (item.id == id) item.copy(enabled = enabled) else item })
@@ -102,6 +113,13 @@ class ProtectionRepository(private val context: Context) {
     fun recordAiGrant() = update { it.copy(freeAiGrantsUsed = it.freeAiGrantsUsed + 1) }
     fun completeOnboarding() = update { it.copy(onboardingComplete = true) }
     fun reset() = update { ProtectionState() }
+
+    private fun sanitize(state: ProtectionState): ProtectionState = state.copy(
+        blockedPackages = state.blockedPackages.excludingUtilLock(context.packageName),
+        schedules = state.schedules.map { schedule ->
+            schedule.copy(packages = schedule.packages.excludingUtilLock(context.packageName))
+        },
+    )
 
     private fun encode(state: ProtectionState): String = JSONObject().apply {
         put("onboardingComplete", state.onboardingComplete)

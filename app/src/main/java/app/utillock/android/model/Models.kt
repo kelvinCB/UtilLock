@@ -96,7 +96,8 @@ object ScheduleEvaluator {
             return ActiveProtection(false, emptySet(), emptySet(), emptySet(), false, "inactive")
         }
 
-        val packages = if (quick) state.blockedPackages else activeSchedules.flatMap { it.packages }.toSet()
+        val packages = (if (quick) state.blockedPackages else activeSchedules.flatMap { it.packages }.toSet())
+            .excludingUtilLock()
         val domains = buildSet {
             if (quick) addAll(state.blockedDomains)
             activeSchedules.forEach { addAll(it.domains) }

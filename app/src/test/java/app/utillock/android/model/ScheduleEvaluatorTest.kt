@@ -71,6 +71,20 @@ class ScheduleEvaluatorTest {
     }
 
     @Test
+    fun activeProtectionNeverIncludesUtilLock() {
+        val active = ScheduleEvaluator.activeProtection(
+            state = ProtectionState(
+                blockedPackages = setOf(UTILLOCK_PACKAGE_NAME, "com.example.focus"),
+                quickBlockUntilEpochMs = 10_000,
+            ),
+            now = LocalDateTime.of(2026, 7, 20, 10, 0),
+            nowEpochMs = 1_000,
+        )
+
+        assertEquals(setOf("com.example.focus"), active.packages)
+    }
+
+    @Test
     fun parseMinuteRejectsMalformedAndOutOfRangeInput() {
         assertEquals(9 * 60 + 5, parseMinute(" 09:05 "))
         assertEquals(23 * 60 + 59, parseMinute("23:59"))

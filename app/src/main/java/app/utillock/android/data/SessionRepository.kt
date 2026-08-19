@@ -63,12 +63,17 @@ class SessionRepository(private val context: Context) {
     }
 
     suspend fun googleLinkUrl(): String? {
+        return providerLinkUrl("google")
+    }
+
+    suspend fun providerLinkUrl(provider: String): String? {
+        if (provider !in setOf("apple", "google", "facebook")) return null
         val session = validSession() ?: return null
         return withContext(Dispatchers.IO) {
             runCatching {
                 val redirect = Uri.encode(AUTH_REDIRECT)
                 val endpoint = BuildConfig.SUPABASE_URL.trimEnd('/') +
-                    "/auth/v1/user/identities/authorize?provider=google&redirect_to=$redirect&skip_http_redirect=true"
+                    "/auth/v1/user/identities/authorize?provider=$provider&redirect_to=$redirect&skip_http_redirect=true"
                 val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     connectTimeout = 12_000
