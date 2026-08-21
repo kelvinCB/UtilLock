@@ -202,7 +202,7 @@ fun WelcomeScreen(
 
 /** Saturated pill CTA — gradient fill, outer bloom, glass highlight (welcome mock). */
 @Composable
-private fun AliveStartButton(
+internal fun AliveStartButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
