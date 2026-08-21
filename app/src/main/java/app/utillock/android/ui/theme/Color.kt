@@ -13,6 +13,7 @@ val Ink500 = Color(0xFF2A3159)
 val Navy700 = Color(0xFF1B2140)
 val Navy600 = Color(0xFF243056)
 val Navy500 = Color(0xFF2F3C6A)
+val RadarBackground = Color(0xFF061426)
 
 val Orange400 = Color(0xFFFF7A2F)
 val Orange300 = Color(0xFFFF8A3D)
